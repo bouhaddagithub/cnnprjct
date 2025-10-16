@@ -1,0 +1,2 @@
+transfer_ms_total,pool_ms_total,fc_ms_total,accuracy_percent,processed,B_chunk,D,out_dim
+3.89939,2.0959,1.25645,64.17,10000,256,196,10
