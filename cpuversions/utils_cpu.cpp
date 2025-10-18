@@ -72,7 +72,7 @@ bool read_shape_from_meta(const std::string &meta_path, std::vector<int> &shape)
     return false;
 }
 
-// --- load csv weights robustly ---
+
 std::vector<float> load_csv_weights(const std::string &path, std::vector<int> &shape) {
     std::ifstream f(path);
     if(!f) throw std::runtime_error("Cannot open CSV: "+path);
@@ -118,14 +118,14 @@ std::vector<float> load_csv_weights(const std::string &path, std::vector<int> &s
             try { data.push_back(std::stof(num)); } catch(...) {}
         }
     }
-    // if no meta infer shape: if one row -> shape = [1, N] else [rows, cols] can't know rows for this loader
+   
     if(!meta && !data.empty() && shape.empty()) {
-        // leave shape empty; callers can set expected shape
+        
     }
     return data;
 }
 
-// --- CSV writer ---
+
 void write_csv_matrix(const std::string &path, const std::vector<std::vector<float>> &rows, const std::vector<std::string> &headers) {
     std::ofstream f(path);
     if(!f) { std::cerr<<"Cannot write "<<path<<"\n"; return; }
@@ -145,7 +145,7 @@ void write_csv_matrix(const std::string &path, const std::vector<std::vector<flo
     }
 }
 
-// perf csv writer
+
 void write_perf_csv(const std::string &path, const std::vector<std::string> &headers, const std::vector<float> &values) {
     std::ofstream f(path);
     if(!f) { std::cerr<<"Cannot write "<<path<<"\n"; return; }

@@ -1,6 +1,5 @@
 // fc_gpu.cu
-// Fully-connected inference over MNIST test set using exported fc_only parameters.
-// Build: nvcc -std=c++14 -O2 -arch=sm_61 -o fc_gpu fc_gpu.cu
+
 
 #include "cuda_utils.h"
 #include <fstream>
@@ -26,7 +25,7 @@ int main() {
         auto images_u8 = load_mnist_images("../data/t10k-images-idx3-ubyte", n_images);
         auto labels = load_mnist_labels("../data/t10k-labels-idx1-ubyte", n_images);
 
-        // ✅ Use separate shapes for each
+        
         std::vector<int> s_fc1w, s_fc1b, s_fc2w, s_fc2b;
 
         auto fc1_w = load_csv_weights("../exports/fc_only/fc1_weight.csv", s_fc1w);
@@ -34,7 +33,7 @@ int main() {
         auto fc2_w = load_csv_weights("../exports/fc_only/fc2_weight.csv", s_fc2w);
         auto fc2_b = load_csv_weights("../exports/fc_only/fc2_bias.csv", s_fc2b);
 
-        // ✅ Validate shapes
+       
         if (s_fc1w.size() < 2 || s_fc2w.size() < 2)
             throw std::runtime_error("Invalid FC weight shapes.");
         if (s_fc1b.size() < 1 || s_fc2b.size() < 1)

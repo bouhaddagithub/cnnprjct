@@ -1,5 +1,5 @@
 // fc_cpu.cpp
-// CPU version of FC-only inference (two FC layers) matching GPU fc pipeline.
+
 #include "utils_cpu.h"
 #include <iostream>
 #include <vector>
@@ -11,7 +11,6 @@ int main(){
         auto images = load_mnist_images("../data/t10k-images-idx3-ubyte", n_images, rows, cols);
         int n_labels; auto labels = load_mnist_labels("../data/t10k-labels-idx1-ubyte", n_labels);
 
-        // load fc_only exports (fc1, fc2)
         std::vector<int> s1, s2;
         auto fc1_w = load_csv_weights("../exports/fc_only/fc1_weight.csv", s1); // [hidden, 784]
         auto fc1_b = load_csv_weights("../exports/fc_only/fc1_bias.csv", s1);
@@ -28,11 +27,11 @@ int main(){
         std::vector<std::vector<float>> classifications;
 
         for(int i=0;i<std::min(n_images,n_labels);++i){
-            // prepare input X BxK but here B==1 processed sequentially
+            
             std::vector<float> X((size_t)K);
             for(int p=0;p<K;++p) X[p] = images[(size_t)i*rows*cols + p] / 255.0f;
 
-            // fc1
+          
             TimerCPU t1; t1.start();
             std::vector<float> hidden_v((size_t)hidden);
             for(int h=0; h<hidden; ++h){
@@ -47,7 +46,7 @@ int main(){
             for(auto &v: hidden_v) if(v<0) v=0;
             t_relu_sum += t2.stop_ms();
 
-            // fc2
+            
             TimerCPU t3; t3.start();
             std::vector<float> outv(out_dim,0.0f);
             for(int o=0;o<out_dim;++o){

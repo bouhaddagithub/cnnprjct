@@ -59,7 +59,7 @@ std::vector<unsigned char> load_mnist_labels(const std::string &path, int &count
     return labels;
 }
 
-// Robust CSV loader.
+
 // - If the first non-empty line contains a "shape":[r,c] JSON-like entry, it will be parsed.
 // - All remaining numeric values (possibly across multiple lines) are parsed as floats.
 // - If no meta shape provided, the function will infer rows/cols by counting columns in each data row.

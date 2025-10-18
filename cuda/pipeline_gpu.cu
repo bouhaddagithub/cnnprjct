@@ -1,6 +1,5 @@
 // pipeline_gpu.cu
-// Enhanced full GPU pipeline with detailed performance and classification export.
-// Build: nvcc -std=c++14 -O2 -arch=sm_61 -o pipeline_gpu pipeline_gpu.cu
+
 
 #include "cuda_utils.h"
 #include <fstream>

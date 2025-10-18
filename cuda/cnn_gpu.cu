@@ -1,12 +1,11 @@
 // cnn_gpu.cu
-// GPU-only CNN layer (Conv + ReLU) inference using exported cnn_only parameters
-// Build: nvcc -std=c++14 -O2 -arch=sm_61 -o cnn_gpu cnn_gpu.cu
 
 #include "cuda_utils.h"
 #include <fstream>
 #include <iostream>
 #include <chrono>
 #include <vector>
+
 
 // ====================================================
 // CUDA kernel: naive convolution with ReLU activation

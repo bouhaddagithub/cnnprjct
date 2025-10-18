@@ -1,7 +1,5 @@
 // pipeline_cpu.cpp
-// CPU implementation of the full pipeline: conv -> relu -> pooling -> fc
-// Loads weights from ../exports/pipeline/* and MNIST from ../data/*
-// Writes detailed perf + classification CSVs to ../finalresults/
+
 
 #include "utils_cpu.h"
 #include <iostream>
@@ -41,7 +39,7 @@ int main() {
         int D = Kout * pool_h * pool_w;
         int out_dim = (fc_meta.size() >= 1 ? fc_meta[0] : 10);
 
-        // Basic validation
+        
         if ((int)conv_b.size() < Kout) {
             std::cerr << "Warning: conv_bias length < Kout; using zeros for missing bias\n";
             conv_b.resize(Kout, 0.0f);
@@ -51,7 +49,7 @@ int main() {
             fc_b.resize(out_dim, 0.0f);
         }
 
-        // Timers
+        
         TimerCPU total_timer; total_timer.start();
         float t_conv_sum = 0.0f, t_pool_sum = 0.0f, t_fc_sum = 0.0f;
 
@@ -59,11 +57,11 @@ int main() {
         std::vector<std::vector<float>> classification_rows;
         classification_rows.reserve(N);
 
-        // Process images sequentially (same semantics as GPU sample-by-sample)
+       
         for (int i = 0; i < N; ++i) {
             // normalize input
             std::vector<float> in((size_t)Kin * H * W, 0.0f);
-            // MNIST is single-channel; when Kin>1 we assume channels are repeated or zeros (but typical Kin==1)
+            
             for (int p = 0; p < H * W; ++p) in[p] = images[(size_t)i * H * W + p] / 255.0f;
 
             // --- CONV + ReLU ---
@@ -81,7 +79,7 @@ int main() {
                                     int in_x = ox + kx;
                                     int in_idx = (ic * H + in_y) * W + in_x;
                                     int w_idx = ((oc * Kin + ic) * K + ky) * K + kx;
-                                    // bounds-safe: if weight vector shorter than expected, treat missing as zero
+                                   
                                     float wv = (w_idx < (int)conv_w.size()) ? conv_w[w_idx] : 0.0f;
                                     s += in[in_idx] * wv;
                                 }
@@ -117,7 +115,7 @@ int main() {
 
             // --- FC (on CPU) ---
             TimerCPU t3; t3.start();
-            // fc_w expected shape [out_dim, D] flattened row-major
+            
             std::vector<float> outv((size_t)out_dim, 0.0f);
             for (int o = 0; o < out_dim; ++o) {
                 float s = (o < (int)fc_b.size() ? fc_b[o] : 0.0f);

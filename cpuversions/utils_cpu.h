@@ -44,4 +44,4 @@ int argmax(const std::vector<float> &v);
 // softmax
 std::vector<float> softmax(const std::vector<float> &x);
 
-#endif // UTILS_CPU_H
+#endif 

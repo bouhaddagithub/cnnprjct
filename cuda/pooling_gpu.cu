@@ -1,6 +1,5 @@
 // pooling_gpu.cu
-// Apply MaxPool -> FC over MNIST test set using exported pooling-only FC params.
-// Build: nvcc -std=c++14 -O2 -arch=sm_61 -o pooling_gpu pooling_gpu.cu
+
 
 #include "cuda_utils.h"
 #include <fstream>
@@ -15,7 +14,7 @@ __global__ void maxpool_nchw_kernel(const float* input, float* output,
     // output layout: (B, C, H/K, W/K)
     int out_w = W / K;
     int out_h = H / K;
-    int linear_idx = blockIdx.x * blockDim.x + threadIdx.x; // index within out_h*out_w
+    int linear_idx = blockIdx.x * blockDim.x + threadIdx.x; 
     int c = blockIdx.y;
     int b = blockIdx.z;
     if (linear_idx >= out_h * out_w) return;
@@ -59,7 +58,7 @@ int main() {
         }
 
         // pooling params
-        int pool_k = 2; // default; change if your Python exported a different value
+        int pool_k = 2; 
 
         // Load FC parameters exported by pooling_only.py
         std::vector<int> fc_shape;
@@ -67,25 +66,25 @@ int main() {
         auto fc_b = load_csv_weights("../exports/pooling_only/fc_bias.csv", fc_shape);
 
         int out_dim = (fc_shape.size() >= 1) ? fc_shape[0] : 10;
-        // Input D depends on pool_k: D = C * (28/pool_k) * (28/pool_k)
+      
         int C = 1, H = 28, W = 28;
         int out_h = H / pool_k;
         int out_w = W / pool_k;
         int D = C * out_h * out_w;
 
-        // If fc_shape gave a different in_dim, trust that for matmul (but our kernel uses D)
+
         int fc_in_dim = (fc_shape.size() >= 2) ? fc_shape[1] : D;
         if (fc_in_dim != D) {
-            // If exported FC expects a different input size, adjust D to match fc metadata
+           
             std::cout << "Note: fc meta in_dim != computed D. Using fc meta in_dim = " << fc_in_dim << "\n";
             D = fc_in_dim;
         }
 
-        // Safety: ensure fc_w and fc_b have expected sizes, else pad zeros
+       
         if ((int)fc_w.size() < out_dim * D) fc_w.assign((size_t)out_dim * D, 0.0f);
         if ((int)fc_b.size() < out_dim) fc_b.assign(out_dim, 0.0f);
 
-        // We'll process in chunks to avoid OOM for large test set
+        
         const int CHUNK = 256; // adjust if needed (lower to reduce memory)
         int total = n_images;
         int chunks = (total + CHUNK - 1) / CHUNK;
@@ -140,7 +139,7 @@ int main() {
 
             // Pool kernel launch: compute out_size = out_h * out_w
             int out_size = out_h * out_w;
-            // grid: x -> positions, y -> channel, z -> sample within chunk
+          
             dim3 blockPool(256);
             dim3 gridPool((out_size + blockPool.x - 1) / blockPool.x, C, chunk_size);
             cudaEventRecord(t0);
@@ -151,7 +150,7 @@ int main() {
             float ms_pool = 0.0f; cudaEventElapsedTime(&ms_pool, t0, t1);
             total_pool_ms += ms_pool;
 
-            // FC: X is (chunk_size x D) stored in d_pool_out contiguous per sample
+            
             // Launch fc_batch_kernel with block(16,16) as earlier
             dim3 blockFC(16, 16);
             dim3 gridFC((out_dim + blockFC.x - 1) / blockFC.x, (chunk_size + blockFC.y - 1) / blockFC.y);

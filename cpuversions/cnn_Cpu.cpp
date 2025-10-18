@@ -1,5 +1,5 @@
 // cnn_cpu.cpp
-// CPU version of CNN-only inference (matches GPU cnn pipeline).
+
 #include "utils_cpu.h"
 #include <iostream>
 #include <vector>
@@ -8,19 +8,19 @@
 
 int main(){
     try {
-        // load mnist test set
+     
         int n_images, rows, cols;
         auto images = load_mnist_images("../data/t10k-images-idx3-ubyte", n_images, rows, cols);
         int n_labels;
         auto labels = load_mnist_labels("../data/t10k-labels-idx1-ubyte", n_labels);
         if(n_images != n_labels) std::cerr<<"Warning: image/label counts differ\n";
 
-        // load weights from exports/cnn_only
+      
         std::vector<int> conv_shape, conv_bias_shape, fc_shape, fc_bias_shape;
-        auto conv_w = load_csv_weights("../exports/cnn_only/conv_weight.csv", conv_shape); // expect [outC,inC,k,k]
-        auto conv_b = load_csv_weights("../exports/cnn_only/conv_bias.csv", conv_bias_shape); // [outC]
-        auto fc_w   = load_csv_weights("../exports/cnn_only/fc_weight.csv", fc_shape); // [out, D]
-        auto fc_b   = load_csv_weights("../exports/cnn_only/fc_bias.csv", fc_bias_shape); // [out]
+        auto conv_w = load_csv_weights("../exports/cnn_only/conv_weight.csv", conv_shape); 
+        auto conv_b = load_csv_weights("../exports/cnn_only/conv_bias.csv", conv_bias_shape); 
+        auto fc_w   = load_csv_weights("../exports/cnn_only/fc_weight.csv", fc_shape); 
+        auto fc_b   = load_csv_weights("../exports/cnn_only/fc_bias.csv", fc_bias_shape); 
 
         // infer shapes if meta missing
         int outC = (conv_shape.size()>=1 ? conv_shape[0] : 8);
@@ -37,7 +37,7 @@ int main(){
         int correct=0;
 
         for(int i=0;i<std::min(n_images,n_labels);++i){
-            // prepare input float normalized
+         
             std::vector<float> in((size_t)H*W);
             for(int p=0;p<H*W;++p) in[p] = images[(size_t)i*H*W + p] / 255.0f;
 
