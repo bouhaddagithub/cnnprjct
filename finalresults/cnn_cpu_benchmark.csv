@@ -1,0 +1,2 @@
+total_ms,conv_ms_sum,accuracy_percent,n_images,outC,inC,K,out_h,out_w,mem_current_bytes,mem_peak_bytes
+845.026,729.247,0,10000,8,1,5,24,24,1.33857e+07,1.34676e+07

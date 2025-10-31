@@ -1,2 +1,2 @@
-total_ms,pool_ms_sum,n_images,C,K,out_h,out_w,mem_current_bytes,mem_peak_bytes
-0.3471,0.0106,10,1,2,14,14,1.2714e+07,1.2714e+07
+total_ms,pool_ms_sum,accuracy_percent,n_images,K,out_h,out_w,mem_current_bytes,mem_peak_bytes
+16.0491,4.28957,0.02,10000,2,14,14,1.34103e+07,1.34103e+07

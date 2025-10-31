@@ -1,5 +1,8 @@
 // cnn_cpu.h
-#pragma once
+
+
+#ifndef CNN_CPU_H
+#define CNN_CPU_H
 #include "utils_cpu.h"
 #include <vector>
 #include <string>
@@ -35,3 +38,4 @@ std::vector<float> cnn_forward_cpu(const std::vector<float> &in,
 
 // Standalone runner for performance testing
 int run_cnn_cpu_standalone();
+#endif

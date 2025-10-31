@@ -1,6 +1,5 @@
 // pipeline_cpu.cpp
 
-
 #include "utils_cpu.h"
 #include <iostream>
 #include <vector>
@@ -39,7 +38,6 @@ int main() {
         int D = Kout * pool_h * pool_w;
         int out_dim = (fc_meta.size() >= 1 ? fc_meta[0] : 10);
 
-        
         if ((int)conv_b.size() < Kout) {
             std::cerr << "Warning: conv_bias length < Kout; using zeros for missing bias\n";
             conv_b.resize(Kout, 0.0f);
@@ -49,7 +47,6 @@ int main() {
             fc_b.resize(out_dim, 0.0f);
         }
 
-        
         TimerCPU total_timer; total_timer.start();
         float t_conv_sum = 0.0f, t_pool_sum = 0.0f, t_fc_sum = 0.0f;
 
@@ -57,20 +54,18 @@ int main() {
         std::vector<std::vector<float>> classification_rows;
         classification_rows.reserve(N);
 
-       
         for (int i = 0; i < N; ++i) {
             // normalize input
             std::vector<float> in((size_t)Kin * H * W, 0.0f);
-            
+
             for (int p = 0; p < H * W; ++p) in[p] = images[(size_t)i * H * W + p] / 255.0f;
 
             // --- CONV + ReLU ---
             TimerCPU t1; t1.start();
-            int conv_out_h = out_h, conv_out_w = out_w;
-            std::vector<float> conv_out((size_t)Kout * conv_out_h * conv_out_w, 0.0f);
+            std::vector<float> conv_out((size_t)Kout * out_h * out_w, 0.0f);
             for (int oc = 0; oc < Kout; ++oc) {
-                for (int oy = 0; oy < conv_out_h; ++oy) {
-                    for (int ox = 0; ox < conv_out_w; ++ox) {
+                for (int oy = 0; oy < out_h; ++oy) {
+                    for (int ox = 0; ox < out_w; ++ox) {
                         float s = conv_b[oc];
                         for (int ic = 0; ic < Kin; ++ic) {
                             for (int ky = 0; ky < K; ++ky) {
@@ -79,13 +74,13 @@ int main() {
                                     int in_x = ox + kx;
                                     int in_idx = (ic * H + in_y) * W + in_x;
                                     int w_idx = ((oc * Kin + ic) * K + ky) * K + kx;
-                                   
+
                                     float wv = (w_idx < (int)conv_w.size()) ? conv_w[w_idx] : 0.0f;
                                     s += in[in_idx] * wv;
                                 }
                             }
                         }
-                        conv_out[(oc * conv_out_h + oy) * conv_out_w + ox] = std::max(0.0f, s);
+                        conv_out[(oc * out_h + oy) * out_w + ox] = std::max(0.0f, s);
                     }
                 }
             }
@@ -102,7 +97,7 @@ int main() {
                             for (int kx = 0; kx < pool_k; ++kx) {
                                 int in_y = oy * pool_k + ky;
                                 int in_x = ox * pool_k + kx;
-                                int idx = (c * conv_out_h + in_y) * conv_out_w + in_x;
+                                int idx = (c * out_h + in_y) * out_w + in_x;
                                 float v = conv_out[idx];
                                 if (v > best) best = v;
                             }
@@ -115,7 +110,7 @@ int main() {
 
             // --- FC (on CPU) ---
             TimerCPU t3; t3.start();
-            
+
             std::vector<float> outv((size_t)out_dim, 0.0f);
             for (int o = 0; o < out_dim; ++o) {
                 float s = (o < (int)fc_b.size() ? fc_b[o] : 0.0f);

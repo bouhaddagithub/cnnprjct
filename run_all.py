@@ -148,6 +148,22 @@ for name, file in CPU_FILES.items():
         extra_sources=[UTILS_PATH]
     )
 
+# ---- Pipeline CPU Build (link all layers) ----
+pipeline_src = os.path.join(CPU_DIR, "pipeline_cpu.cpp")
+pipeline_out = os.path.join(CPU_BUILD, "pipeline_cpu.exe")
+
+if os.path.exists(pipeline_src) and os.path.exists(UTILS_PATH):
+    # Compile pipeline without -DSTANDALONE to link all layers
+    compile_file(
+        pipeline_src,
+        pipeline_out,
+        "g++",
+        ["-O2", "-std=c++17"],
+        extra_sources=[UTILS_PATH]
+    )
+else:
+    print("❌ Missing pipeline_cpu.cpp or utils_cpu.cpp")
+
 # ========================================
 # STEP 3: RUN CUDA + CPU EXECUTABLES
 # ========================================

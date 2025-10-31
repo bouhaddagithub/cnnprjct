@@ -60,9 +60,7 @@ std::vector<unsigned char> load_mnist_labels(const std::string &path, int &count
 }
 
 
-// - If the first non-empty line contains a "shape":[r,c] JSON-like entry, it will be parsed.
-// - All remaining numeric values (possibly across multiple lines) are parsed as floats.
-// - If no meta shape provided, the function will infer rows/cols by counting columns in each data row.
+
 std::vector<float> load_csv_weights(const std::string &path, std::vector<int> &shape) {
     std::ifstream f(path, std::ios::binary);
     if (!f.is_open()) throw std::runtime_error("Cannot open CSV file: " + path);

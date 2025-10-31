@@ -9,13 +9,15 @@ __global__ void maxpool_nchw_kernel(const float* input, float* output,
 {
     int out_w = W / K;
     int out_h = H / K;
-    int linear_idx = blockIdx.x * blockDim.x + threadIdx.x; 
-    int c = blockIdx.y;
-    int b = blockIdx.z;
-    if (linear_idx >= out_h * out_w) return;
+    int total_out = B * C * out_h * out_w;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= total_out) return;
 
-    int oy = linear_idx / out_w;
-    int ox = linear_idx % out_w;
+    int b = idx / (C * out_h * out_w);
+    int rem = idx % (C * out_h * out_w);
+    int c = rem / (out_h * out_w);
+    int oy = (rem % (out_h * out_w)) / out_w;
+    int ox = (rem % (out_h * out_w)) % out_w;
 
     float best = -1e9f;
     for (int ky = 0; ky < K; ++ky) {
@@ -28,8 +30,7 @@ __global__ void maxpool_nchw_kernel(const float* input, float* output,
         }
     }
 
-    int out_idx = ((b * C + c) * out_h + oy) * out_w + ox;
-    output[out_idx] = best;
+    output[idx] = best;
 }
 
 // =====================================================
@@ -39,12 +40,9 @@ inline void run_pooling_layer(const float* d_input, float* d_output,
                               int B, int C, int H, int W, int K,
                               cudaStream_t stream = 0)
 {
-    int out_h = H / K;
-    int out_w = W / K;
-    int out_size = out_h * out_w;
-
+    int total_out = B * C * (H / K) * (W / K);
     dim3 block(256);
-    dim3 grid((out_size + block.x - 1) / block.x, C, B);
+    dim3 grid((total_out + block.x - 1) / block.x);
 
     maxpool_nchw_kernel<<<grid, block, 0, stream>>>(d_input, d_output, B, C, H, W, K);
     cudaCheckError(cudaGetLastError());

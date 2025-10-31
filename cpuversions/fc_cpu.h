@@ -1,5 +1,6 @@
 // fc_cpu.h
-#pragma once
+#ifndef FC_CPU_H
+#define FC_CPU_H
 #include "utils_cpu.h"
 #include <vector>
 #include <string>
@@ -31,3 +32,4 @@ void relu_forward_cpu(std::vector<float> &data, float &t_relu_ms);
 
 // Standalone runner for performance testing
 int run_fc_cpu_standalone();
+#endif

@@ -83,71 +83,50 @@ int main() {
         int out_w = W / pool_k;
         int D = C * out_h * out_w;
 
-        const int CHUNK = 256;
-        int total = n_images;
-        int chunks = (total + CHUNK - 1) / CHUNK;
-
-        // --- Allocate device memory ---
+        // --- Allocate device memory for all images ---
         float *d_input = nullptr;
         float *d_output = nullptr;
-        size_t max_chunk = std::min(CHUNK, total);
-        size_t input_bytes = max_chunk * C * H * W * sizeof(float);
-        size_t output_bytes = max_chunk * C * out_h * out_w * sizeof(float);
+        size_t input_bytes = (size_t)B * C * H * W * sizeof(float);
+        size_t output_bytes = (size_t)B * C * out_h * out_w * sizeof(float);
 
         cudaCheckError(cudaMalloc(&d_input, input_bytes));
         cudaCheckError(cudaMalloc(&d_output, output_bytes));
 
-        std::vector<float> h_input((size_t)max_chunk * C * H * W);
+        // Normalize all images
+        std::vector<float> h_input((size_t)B * C * H * W);
+        for (int i = 0; i < B; ++i) {
+            for (int p = 0; p < H * W; ++p)
+                h_input[(size_t)i * H * W + p] = images_u8[i * H * W + p] / 255.0f;
+        }
+
         cudaEvent_t ev_start, ev_end;
         cudaEventCreate(&ev_start);
         cudaEventCreate(&ev_end);
 
-        double total_pool_ms = 0.0;
-        int processed = 0;
-
         cudaEventRecord(ev_start);
 
-        // --- Process in chunks ---
-        for (int ch = 0; ch < chunks; ++ch) {
-            int start_idx = ch * CHUNK;
-            int chunk_size = std::min(CHUNK, total - start_idx);
-            if (chunk_size <= 0) break;
+        // Copy all input to GPU
+        cudaMemcpy(d_input, h_input.data(), input_bytes, cudaMemcpyHostToDevice);
 
-            // Normalize batch
-            for (int i = 0; i < chunk_size; ++i) {
-                int img_idx = start_idx + i;
-                for (int p = 0; p < H * W; ++p)
-                    h_input[(size_t)i * H * W + p] = images_u8[img_idx * H * W + p] / 255.0f;
-            }
+        // --- Run pooling on all images ---
+        cudaEvent_t t0, t1;
+        cudaEventCreate(&t0);
+        cudaEventCreate(&t1);
+        cudaEventRecord(t0);
 
-            // Copy to GPU
-            cudaMemcpy(d_input, h_input.data(),
-                       chunk_size * C * H * W * sizeof(float),
-                       cudaMemcpyHostToDevice);
+        run_pooling_layer(d_input, d_output, B, C, H, W, pool_k);
 
-            // --- Run pooling ---
-            cudaEvent_t t0, t1;
-            cudaEventCreate(&t0);
-            cudaEventCreate(&t1);
-            cudaEventRecord(t0);
-
-            run_pooling_layer(d_input, d_output, chunk_size, C, H, W, pool_k);
-
-            cudaEventRecord(t1);
-            cudaEventSynchronize(t1);
-            float ms = 0.0f;
-            cudaEventElapsedTime(&ms, t0, t1);
-            total_pool_ms += ms;
-            processed += chunk_size;
-
-            cudaEventDestroy(t0);
-            cudaEventDestroy(t1);
-        }
+        cudaEventRecord(t1);
+        cudaEventSynchronize(t1);
+        float pool_ms = 0.0f;
+        cudaEventElapsedTime(&pool_ms, t0, t1);
 
         cudaEventRecord(ev_end);
         cudaEventSynchronize(ev_end);
         float total_ms = 0.0f;
         cudaEventElapsedTime(&total_ms, ev_start, ev_end);
+
+        int processed = B;
 
         std::cout << "✅ Pooling GPU layer completed.\n"
                   << "   Images processed: " << processed << "\n"

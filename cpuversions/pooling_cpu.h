@@ -1,5 +1,6 @@
 // pooling_cpu.h
-#pragma once
+#ifndef POOLING_CPU_H
+#define POOLING_CPU_H
 #include "utils_cpu.h"
 #include <vector>
 #include <string>
@@ -30,3 +31,4 @@ std::vector<float> pooling_forward_cpu(const std::vector<float> &in,
 
 // Standalone runner for performance testing
 int run_pooling_cpu_standalone();
+#endif
