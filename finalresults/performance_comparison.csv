@@ -1,13 +1,13 @@
 Category,Model,Runtime (s),Accuracy (%)
-Python,cnn_only,30.4018,98.22
-Python,pooling_only,25.8186,91.65
-Python,fc_only,26.5814,96.93
-Python,pipeline,32.4926,98.29
-GPU,cnn_gpu,0.2063,N/A
-GPU,pooling_gpu,0.2001,N/A
-GPU,fc_gpu,0.2836,95.86
-GPU,pipeline_gpu,0.2422,86.87
-CPU,cnn_cpu,0.9026,N/A
-CPU,pooling_cpu,0.0951,N/A
-CPU,fc_cpu,0.6001,N/A
-CPU,pipeline_cpu,0.8525,N/A
+Python,cnn_only,30.2541,98.19
+Python,pooling_only,25.5102,91.67
+Python,fc_only,27.4272,97.44
+Python,pipeline,34.2498,98.19
+GPU,cnn_gpu,0.2121,N/A
+GPU,pooling_gpu,0.2004,N/A
+GPU,fc_gpu,0.2544,95.73
+GPU,pipeline_gpu,0.2343,91.13
+CPU,cnn_cpu,0.8864,N/A
+CPU,pooling_cpu,0.0844,N/A
+CPU,fc_cpu,0.7498,N/A
+CPU,pipeline_cpu,0.8837,N/A

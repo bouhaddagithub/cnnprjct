@@ -1,0 +1,239 @@
+
+D:\cnnprjct>python run_all.py
+
+🧹 Cleaning old build folders...
+
+🐍 RUNNING PYTHON PIPELINE
+
+🐍 Running Python: cnn_only.py
+Training CNN-only model...
+Epoch 1/5  Loss=0.2315  Acc=93.44%
+Epoch 2/5  Loss=0.0854  Acc=97.48%
+Epoch 3/5  Loss=0.0623  Acc=98.09%
+Epoch 4/5  Loss=0.0514  Acc=98.38%
+Epoch 5/5  Loss=0.0423  Acc=98.68%
+Test Accuracy: 97.97%
+
+
+🐍 Running Python: pooling_only.py
+Training Pooling-only model...
+Epoch 1/5  Loss=0.6533  Acc=82.78%
+Epoch 2/5  Loss=0.3610  Acc=89.58%
+Epoch 3/5  Loss=0.3268  Acc=90.54%
+Epoch 4/5  Loss=0.3116  Acc=90.87%
+Epoch 5/5  Loss=0.3033  Acc=91.10%
+Test Accuracy: 91.51%
+
+
+🐍 Running Python: fc_only.py
+Training FC-only model...
+Epoch 1/5  Loss=0.3058  Acc=91.26%
+Epoch 2/5  Loss=0.1340  Acc=96.09%
+Epoch 3/5  Loss=0.0928  Acc=97.27%
+Epoch 4/5  Loss=0.0706  Acc=97.80%
+Epoch 5/5  Loss=0.0550  Acc=98.32%
+Test Accuracy: 97.64%
+
+
+🐍 Running Python: pipeline.py
+Training full pipeline model...
+Epoch 1/5  Loss=0.3057  Acc=91.36%
+Epoch 2/5  Loss=0.1086  Acc=96.87%
+Epoch 3/5  Loss=0.0763  Acc=97.73%
+Epoch 4/5  Loss=0.0633  Acc=98.10%
+Epoch 5/5  Loss=0.0556  Acc=98.37%
+Test Accuracy: 98.19%
+
+
+🔨 COMPILING CUDA + CPU FILES
+
+🔧 Compiling: D:\cnnprjct\cuda\cnn_gpu.cu → D:\cnnprjct\cuda\build\cnn_gpu.exe
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+cnn_gpu.cu
+tmpxft_0000505c_00000000-7_cnn_gpu.cudafe1.cpp
+   Création de la bibliothèque D:\cnnprjct\cuda\build\cnn_gpu.lib et de l'objet D:\cnnprjct\cuda\build\cnn_gpu.exp
+✅ Build successful!
+
+🔧 Compiling: D:\cnnprjct\cuda\pooling_gpu.cu → D:\cnnprjct\cuda\build\pooling_gpu.exe
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+pooling_gpu.cu
+D:\cnnprjct\cuda\pooling_gpu.cu(84): warning #177-D: variable "D" was declared but never referenced
+          int D = C * out_h * out_w;
+              ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+tmpxft_00000904_00000000-7_pooling_gpu.cudafe1.cpp
+   Création de la bibliothèque D:\cnnprjct\cuda\build\pooling_gpu.lib et de l'objet D:\cnnprjct\cuda\build\pooling_gpu.exp
+✅ Build successful!
+
+🔧 Compiling: D:\cnnprjct\cuda\fc_gpu.cu → D:\cnnprjct\cuda\build\fc_gpu.exe
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+fc_gpu.cu
+tmpxft_00004fa4_00000000-7_fc_gpu.cudafe1.cpp
+   Création de la bibliothèque D:\cnnprjct\cuda\build\fc_gpu.lib et de l'objet D:\cnnprjct\cuda\build\fc_gpu.exp
+✅ Build successful!
+
+🔧 Compiling: D:\cnnprjct\cuda\pipeline_gpu.cu → D:\cnnprjct\cuda\build\pipeline_gpu.exe
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+pipeline_gpu.cu
+tmpxft_00001c2c_00000000-7_pipeline_gpu.cudafe1.cpp
+   Création de la bibliothèque D:\cnnprjct\cuda\build\pipeline_gpu.lib et de l'objet D:\cnnprjct\cuda\build\pipeline_gpu.exp
+✅ Build successful!
+
+🔧 Compiling: D:\cnnprjct\cpuversions\cnn_cpu.cpp → D:\cnnprjct\cpuversions\build\cnn_cpu.exe
+✅ Build successful!
+
+🔧 Compiling: D:\cnnprjct\cpuversions\pooling_cpu.cpp → D:\cnnprjct\cpuversions\build\pooling_cpu.exe
+✅ Build successful!
+
+🔧 Compiling: D:\cnnprjct\cpuversions\fc_cpu.cpp → D:\cnnprjct\cpuversions\build\fc_cpu.exe
+✅ Build successful!
+
+🔧 Compiling: D:\cnnprjct\cpuversions\pipeline_cpu.cpp → D:\cnnprjct\cpuversions\build\pipeline_cpu.exe
+✅ Build successful!
+
+🔧 Compiling: D:\cnnprjct\cpuversions\pipeline_cpu.cpp → D:\cnnprjct\cpuversions\build\pipeline_cpu.exe
+✅ Build successful!
+
+🚀 RUNNING GPU & CPU MODULES
+   All executables will run from: D:\cnnprjct
+   Data directory: D:\cnnprjct\data
+   Exports directory: D:\cnnprjct\exports
+   Results directory: D:\cnnprjct\finalresults
+
+🚀 Running: D:\cnnprjct\cuda\build\cnn_gpu.exe
+âœ… CNN GPU Benchmark Complete.
+âڈ±ï¸ڈ Total time for 10000 images: 15.8576 ms
+   Avg per image: 0.00158576 ms
+
+
+🚀 Running: D:\cnnprjct\cuda\build\pooling_gpu.exe
+â„¹ï¸ڈ Using pooling kernel size K = 2
+âœ… Pooling GPU layer completed.
+   Images processed: 10000
+   Kernel size: 2
+   Total time: 4.04672 ms
+
+
+🚀 Running: D:\cnnprjct\cuda\build\fc_gpu.exe
+âœ… FC GPU Completed. Accuracy: 95.37%, Time: 4.78061 ms
+
+
+🚀 Running: D:\cnnprjct\cuda\build\pipeline_gpu.exe
+Loaded 10000 test images
+Conv weight shape: 8x1x5
+FC weight shape: 10x1152
+Conv_w first 5 values: -0.275204 -0.386156 -0.263032 -0.0576344 -0.07206
+Conv_b first 5 values: -0.308924 -0.343429 -0.150352 0.108969 -0.025946
+FC_w first 5 values: -0.0859793 -0.0692734 0.00023663 -0.000259238 0.00269786
+FC_b first 5 values: 0.00541366 0.0354405 -0.0202801 -0.0254005 0.00915891
+Model geometry: C_in=1, C_out=8, K_conv=5, D=1152, out_dim=10
+First image logits: 0 0 0.37252 0.188256 0 0 0 1.99495 0.247583 0
+Batch 0: 128 images, H2D: 0.048032ms, CNN: 0.5384ms, Pool: 0.02512ms, FC: 0.090144ms, D2H: 0.066688ms, Total: 0.840512ms
+Batch 1: 128 images, H2D: 0.04272ms, CNN: 0.149856ms, Pool: 0.012608ms, FC: 0.043008ms, D2H: 0.02032ms, Total: 0.33584ms
+Batch 2: 128 images, H2D: 0.082336ms, CNN: 0.19856ms, Pool: 0.012704ms, FC: 0.063424ms, D2H: 0.025984ms, Total: 0.44688ms
+Batch 3: 128 images, H2D: 0.056928ms, CNN: 0.141952ms, Pool: 0.014112ms, FC: 0.043104ms, D2H: 0.02368ms, Total: 0.359744ms
+Batch 4: 128 images, H2D: 0.058304ms, CNN: 0.14272ms, Pool: 0.013472ms, FC: 0.041696ms, D2H: 0.024128ms, Total: 0.36304ms
+Batch 5: 128 images, H2D: 0.059232ms, CNN: 0.142496ms, Pool: 0.013568ms, FC: 0.043552ms, D2H: 0.024864ms, Total: 0.36736ms
+Batch 6: 128 images, H2D: 0.057984ms, CNN: 0.14272ms, Pool: 0.013056ms, FC: 0.04416ms, D2H: 0.025568ms, Total: 0.364672ms
+Batch 7: 128 images, H2D: 0.058496ms, CNN: 0.142112ms, Pool: 0.01312ms, FC: 0.043008ms, D2H: 0.025376ms, Total: 0.363968ms
+Batch 8: 128 images, H2D: 0.058816ms, CNN: 0.141728ms, Pool: 0.012672ms, FC: 0.043264ms, D2H: 0.024896ms, Total: 0.36256ms
+Batch 9: 128 images, H2D: 0.074464ms, CNN: 0.154432ms, Pool: 0.012512ms, FC: 0.042944ms, D2H: 0.028896ms, Total: 0.39216ms
+Batch 10: 128 images, H2D: 0.057344ms, CNN: 0.142624ms, Pool: 0.014144ms, FC: 0.043008ms, D2H: 0.023936ms, Total: 0.361536ms
+Batch 11: 128 images, H2D: 0.058016ms, CNN: 0.142976ms, Pool: 0.01312ms, FC: 0.043296ms, D2H: 0.035872ms, Total: 0.386848ms
+Batch 12: 128 images, H2D: 0.058208ms, CNN: 0.142688ms, Pool: 0.013664ms, FC: 0.0592ms, D2H: 0.025376ms, Total: 0.362816ms
+Batch 13: 128 images, H2D: 0.058528ms, CNN: 0.14336ms, Pool: 0.012896ms, FC: 0.04336ms, D2H: 0.033312ms, Total: 0.356576ms
+Batch 14: 128 images, H2D: 0.060672ms, CNN: 0.144576ms, Pool: 0.013248ms, FC: 0.043072ms, D2H: 0.027392ms, Total: 0.371072ms
+Batch 15: 128 images, H2D: 0.057184ms, CNN: 0.142464ms, Pool: 0.013984ms, FC: 0.058272ms, D2H: 0.025248ms, Total: 0.361152ms
+Batch 16: 128 images, H2D: 0.05824ms, CNN: 0.141984ms, Pool: 0.013952ms, FC: 0.059392ms, D2H: 0.017152ms, Total: 0.355744ms
+Batch 17: 128 images, H2D: 0.058112ms, CNN: 0.142624ms, Pool: 0.013248ms, FC: 0.05776ms, D2H: 0.024416ms, Total: 0.358688ms
+Batch 18: 128 images, H2D: 0.05888ms, CNN: 0.143072ms, Pool: 0.014016ms, FC: 0.059168ms, D2H: 0.025184ms, Total: 0.363776ms
+Batch 19: 128 images, H2D: 0.058752ms, CNN: 0.142752ms, Pool: 0.01728ms, FC: 0.044128ms, D2H: 0.033824ms, Total: 0.362688ms
+Batch 20: 128 images, H2D: 0.059104ms, CNN: 0.142816ms, Pool: 0.014272ms, FC: 0.05984ms, D2H: 0.024736ms, Total: 0.368544ms
+Batch 21: 128 images, H2D: 0.058624ms, CNN: 0.141728ms, Pool: 0.014336ms, FC: 0.043008ms, D2H: 0.02544ms, Total: 0.365792ms
+Batch 22: 128 images, H2D: 0.058112ms, CNN: 0.142528ms, Pool: 0.01424ms, FC: 0.044192ms, D2H: 0.035424ms, Total: 0.377024ms
+Batch 23: 128 images, H2D: 0.058944ms, CNN: 0.142752ms, Pool: 0.013664ms, FC: 0.059392ms, D2H: 0.025344ms, Total: 0.369248ms
+Batch 24: 128 images, H2D: 0.059008ms, CNN: 0.142176ms, Pool: 0.013248ms, FC: 0.043008ms, D2H: 0.025248ms, Total: 0.367168ms
+Batch 25: 128 images, H2D: 0.0584ms, CNN: 0.141696ms, Pool: 0.014048ms, FC: 0.042912ms, D2H: 0.025056ms, Total: 0.36352ms
+Batch 26: 128 images, H2D: 0.058208ms, CNN: 0.142912ms, Pool: 0.012736ms, FC: 0.059424ms, D2H: 0.024576ms, Total: 0.368128ms
+Batch 27: 128 images, H2D: 0.059456ms, CNN: 0.142816ms, Pool: 0.014112ms, FC: 0.042816ms, D2H: 0.024672ms, Total: 0.366336ms
+Batch 28: 128 images, H2D: 0.05824ms, CNN: 0.142336ms, Pool: 0.014112ms, FC: 0.043008ms, D2H: 0.024896ms, Total: 0.36544ms
+Batch 29: 128 images, H2D: 0.058464ms, CNN: 0.141824ms, Pool: 0.014336ms, FC: 0.043456ms, D2H: 0.024736ms, Total: 0.365536ms
+Batch 30: 128 images, H2D: 0.058432ms, CNN: 0.142464ms, Pool: 0.014016ms, FC: 0.043328ms, D2H: 0.024704ms, Total: 0.36864ms
+Batch 31: 128 images, H2D: 0.058656ms, CNN: 0.142816ms, Pool: 0.012416ms, FC: 0.044384ms, D2H: 0.024544ms, Total: 0.367904ms
+Batch 32: 128 images, H2D: 0.058976ms, CNN: 0.142528ms, Pool: 0.013888ms, FC: 0.042816ms, D2H: 0.025056ms, Total: 0.365568ms
+Batch 33: 128 images, H2D: 0.058784ms, CNN: 0.142752ms, Pool: 0.013664ms, FC: 0.044384ms, D2H: 0.024928ms, Total: 0.366848ms
+Batch 34: 128 images, H2D: 0.076192ms, CNN: 0.14272ms, Pool: 0.022432ms, FC: 0.043008ms, D2H: 0.024864ms, Total: 0.38432ms
+Batch 35: 128 images, H2D: 0.059072ms, CNN: 0.142656ms, Pool: 0.01296ms, FC: 0.043008ms, D2H: 0.0256ms, Total: 0.365696ms
+Batch 36: 128 images, H2D: 0.058848ms, CNN: 0.142144ms, Pool: 0.014336ms, FC: 0.042688ms, D2H: 0.02496ms, Total: 0.365152ms
+Batch 37: 128 images, H2D: 0.059168ms, CNN: 0.142624ms, Pool: 0.012608ms, FC: 0.043872ms, D2H: 0.02512ms, Total: 0.367616ms
+Batch 38: 128 images, H2D: 0.058048ms, CNN: 0.142336ms, Pool: 0.013696ms, FC: 0.042976ms, D2H: 0.024608ms, Total: 0.364288ms
+Batch 39: 128 images, H2D: 0.0584ms, CNN: 0.143168ms, Pool: 0.014016ms, FC: 0.060224ms, D2H: 0.024448ms, Total: 0.366592ms
+Batch 40: 128 images, H2D: 0.058688ms, CNN: 0.142816ms, Pool: 0.012768ms, FC: 0.059712ms, D2H: 0.024704ms, Total: 0.366688ms
+Batch 41: 128 images, H2D: 0.058272ms, CNN: 0.142784ms, Pool: 0.0136ms, FC: 0.042848ms, D2H: 0.028256ms, Total: 0.373024ms
+Batch 42: 128 images, H2D: 0.059264ms, CNN: 0.142784ms, Pool: 0.013664ms, FC: 0.04352ms, D2H: 0.025056ms, Total: 0.377024ms
+Batch 43: 128 images, H2D: 0.057888ms, CNN: 0.141792ms, Pool: 0.01344ms, FC: 0.059392ms, D2H: 0.025152ms, Total: 0.365824ms
+Batch 44: 128 images, H2D: 0.058752ms, CNN: 0.143008ms, Pool: 0.013216ms, FC: 0.043008ms, D2H: 0.02496ms, Total: 0.366208ms
+Batch 45: 128 images, H2D: 0.059328ms, CNN: 0.142688ms, Pool: 0.013056ms, FC: 0.043008ms, D2H: 0.024864ms, Total: 0.365216ms
+Batch 46: 128 images, H2D: 0.058752ms, CNN: 0.14256ms, Pool: 0.01296ms, FC: 0.059712ms, D2H: 0.024704ms, Total: 0.363712ms
+Batch 47: 128 images, H2D: 0.058464ms, CNN: 0.142336ms, Pool: 0.013728ms, FC: 0.059392ms, D2H: 0.025376ms, Total: 0.364704ms
+Batch 48: 128 images, H2D: 0.058624ms, CNN: 0.142496ms, Pool: 0.013504ms, FC: 0.059392ms, D2H: 0.025248ms, Total: 0.36448ms
+Batch 49: 128 images, H2D: 0.043136ms, CNN: 0.149056ms, Pool: 0.013856ms, FC: 0.043744ms, D2H: 0.018144ms, Total: 0.343936ms
+Batch 50: 128 images, H2D: 0.043264ms, CNN: 0.148128ms, Pool: 0.013728ms, FC: 0.043904ms, D2H: 0.01776ms, Total: 0.3352ms
+Batch 51: 128 images, H2D: 0.043744ms, CNN: 0.147808ms, Pool: 0.014208ms, FC: 0.043424ms, D2H: 0.038752ms, Total: 0.35552ms
+Batch 52: 128 images, H2D: 0.043712ms, CNN: 0.143328ms, Pool: 0.013888ms, FC: 0.043584ms, D2H: 0.023808ms, Total: 0.354048ms
+Batch 53: 128 images, H2D: 0.059008ms, CNN: 0.142752ms, Pool: 0.013536ms, FC: 0.041952ms, D2H: 0.025184ms, Total: 0.36576ms
+Batch 54: 128 images, H2D: 0.059104ms, CNN: 0.142144ms, Pool: 0.013024ms, FC: 0.043008ms, D2H: 0.02432ms, Total: 0.365088ms
+Batch 55: 128 images, H2D: 0.058592ms, CNN: 0.142208ms, Pool: 0.014176ms, FC: 0.043168ms, D2H: 0.024736ms, Total: 0.367808ms
+Batch 56: 128 images, H2D: 0.057952ms, CNN: 0.143456ms, Pool: 0.0128ms, FC: 0.044256ms, D2H: 0.025216ms, Total: 0.367008ms
+Batch 57: 128 images, H2D: 0.043648ms, CNN: 0.143168ms, Pool: 0.013088ms, FC: 0.057856ms, D2H: 0.024288ms, Total: 0.351328ms
+Batch 58: 128 images, H2D: 0.059328ms, CNN: 0.143424ms, Pool: 0.013632ms, FC: 0.043648ms, D2H: 0.024672ms, Total: 0.367264ms
+Batch 59: 128 images, H2D: 0.058432ms, CNN: 0.142848ms, Pool: 0.01328ms, FC: 0.044224ms, D2H: 0.025408ms, Total: 0.36832ms
+Batch 60: 128 images, H2D: 0.058368ms, CNN: 0.14224ms, Pool: 0.013536ms, FC: 0.04384ms, D2H: 0.024864ms, Total: 0.365056ms
+Batch 61: 128 images, H2D: 0.059232ms, CNN: 0.142752ms, Pool: 0.014112ms, FC: 0.043008ms, D2H: 0.02496ms, Total: 0.367424ms
+Batch 62: 128 images, H2D: 0.057408ms, CNN: 0.140864ms, Pool: 0.013184ms, FC: 0.04336ms, D2H: 0.021088ms, Total: 0.36304ms
+Batch 63: 128 images, H2D: 0.058592ms, CNN: 0.143136ms, Pool: 0.012928ms, FC: 0.059392ms, D2H: 0.024928ms, Total: 0.365696ms
+Batch 64: 128 images, H2D: 0.058528ms, CNN: 0.142496ms, Pool: 0.012992ms, FC: 0.044224ms, D2H: 0.024928ms, Total: 0.36624ms
+Batch 65: 128 images, H2D: 0.058784ms, CNN: 0.142816ms, Pool: 0.014304ms, FC: 0.044128ms, D2H: 0.025376ms, Total: 0.368352ms
+Batch 66: 128 images, H2D: 0.059328ms, CNN: 0.141664ms, Pool: 0.013312ms, FC: 0.043008ms, D2H: 0.025344ms, Total: 0.366048ms
+Batch 67: 128 images, H2D: 0.058432ms, CNN: 0.143232ms, Pool: 0.013568ms, FC: 0.04384ms, D2H: 0.02448ms, Total: 0.36688ms
+Batch 68: 128 images, H2D: 0.05744ms, CNN: 0.142112ms, Pool: 0.013504ms, FC: 0.043008ms, D2H: 0.023872ms, Total: 0.364032ms
+Batch 69: 128 images, H2D: 0.049984ms, CNN: 0.143488ms, Pool: 0.01424ms, FC: 0.044256ms, D2H: 0.024576ms, Total: 0.390272ms
+Batch 70: 128 images, H2D: 0.0584ms, CNN: 0.143232ms, Pool: 0.013472ms, FC: 0.043744ms, D2H: 0.024672ms, Total: 0.36768ms
+Batch 71: 128 images, H2D: 0.058912ms, CNN: 0.142656ms, Pool: 0.013344ms, FC: 0.043744ms, D2H: 0.02528ms, Total: 0.368032ms
+Batch 72: 128 images, H2D: 0.0584ms, CNN: 0.14272ms, Pool: 0.014048ms, FC: 0.043136ms, D2H: 0.024512ms, Total: 0.364224ms
+Batch 73: 128 images, H2D: 0.05856ms, CNN: 0.142176ms, Pool: 0.013216ms, FC: 0.043072ms, D2H: 0.024576ms, Total: 0.3664ms
+Batch 74: 128 images, H2D: 0.057376ms, CNN: 0.141472ms, Pool: 0.013824ms, FC: 0.043008ms, D2H: 0.024ms, Total: 0.364288ms
+Batch 75: 128 images, H2D: 0.058784ms, CNN: 0.142944ms, Pool: 0.012928ms, FC: 0.04352ms, D2H: 0.0248ms, Total: 0.364576ms
+Batch 76: 128 images, H2D: 0.059104ms, CNN: 0.142496ms, Pool: 0.013568ms, FC: 0.042912ms, D2H: 0.024864ms, Total: 0.365056ms
+Batch 77: 128 images, H2D: 0.05872ms, CNN: 0.142656ms, Pool: 0.013792ms, FC: 0.043424ms, D2H: 0.024224ms, Total: 0.366272ms
+Batch 78: 16 images, H2D: 0.02352ms, CNN: 0.043584ms, Pool: 0.004992ms, FC: 0.036864ms, D2H: 0.024768ms, Total: 0.18048ms
+âœ… Fixed Pipeline complete. Accuracy: 80.53%
+âڈ±ï¸ڈ  Total elapsed time: 36.5283 ms
+ًں“ٹ Performance data saved to finalresults/pipeline_perf_fixed.csv
+ًں“ˆ Summary saved to finalresults/pipeline_perf_summary_fixed.csv
+
+
+🚀 Running: D:\cnnprjct\cpuversions\build\cnn_cpu.exe
+CNN CPU: total_ms=814.545 acc=0%
+
+
+🚀 Running: D:\cnnprjct\cpuversions\build\pooling_cpu.exe
+Pooling CPU: total_ms=16.1038 acc=0.02%
+
+
+🚀 Running: D:\cnnprjct\cpuversions\build\fc_cpu.exe
+FC CPU: total_ms=450.518 acc=95.38%
+
+
+🚀 Running: D:\cnnprjct\cpuversions\build\pipeline_cpu.exe
+Pipeline CPU:
+Total: 804.488 ms
+Accuracy: 95.18 %
+Written: finalresults/pipeline_cpu_perf.csv and ../finalresults/pipeline_cpu_classification.csv
+
+
+📁 Results saved to: D:\cnnprjct\finalresults\performance_comparison.csv
+
+✅ ALL DONE SUCCESSFULLY ✅

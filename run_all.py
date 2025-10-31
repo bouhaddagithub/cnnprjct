@@ -200,7 +200,7 @@ print(f"\n📁 Results saved to: {csv_path}")
 # ========================================
 
 models = sorted(set([x[1].split('_')[0].upper() for x in performance if x[1] != "pipeline"]))
-categories = ["Python", "GPU", "CPU"]
+categories = [ "GPU", "CPU"]
 
 runtime_data = {c: [] for c in categories}
 
@@ -213,7 +213,7 @@ x = range(len(models))
 width = 0.25
 
 plt.figure(figsize=(12, 6))
-plt.bar([i - width for i in x], runtime_data["Python"], width, label="Python")
+
 plt.bar(x, runtime_data["GPU"], width, label="GPU")
 plt.bar([i + width for i in x], runtime_data["CPU"], width, label="CPU")
 plt.xticks(x, models)
