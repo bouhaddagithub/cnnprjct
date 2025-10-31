@@ -1,2 +1,2 @@
-transfer_ms,fc1_ms,relu_ms,fc2_ms,accuracy_percent,B,K,hidden,out
-3.09546,80.2182,5.0726,0.142688,95.77,10000,784,128,10
+total_ms,accuracy_percent,B,K,hidden,out_dim
+4.73021,94.09,10000,784,128,10

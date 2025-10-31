@@ -1,0 +1,2 @@
+total_ms,accuracy_percent,n_images,batch_size
+37.8873,81.32,10000,128

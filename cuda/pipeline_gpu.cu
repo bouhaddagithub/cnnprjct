@@ -1,189 +1,305 @@
+// pipeline_gpu_fixed.cu
 #include "cuda_utils.h"
+#include "cnn_layer.cuh"
+#include "pooling_layer.cuh"
+#include "fc_layer.cuh"
+
 #include <cuda_runtime.h>
+#include <fstream>
 #include <iostream>
 #include <vector>
-#include <chrono>
+#include <algorithm>
 
-#define BATCH_SIZE 64     // Tune: 32–128 is ideal for MNIST
-#define THREADS 256       // for FC layer
-#define CHECK(call) { cudaError_t e = call; if(e != cudaSuccess){printf("CUDA Error: %s\n", cudaGetErrorString(e)); exit(1);} }
+#ifndef BATCH_SIZE
+#define BATCH_SIZE 128
+#endif
 
-// ======================================================================
-// Convolution Kernel (Simplified, shared memory optimized)
-// ======================================================================
-__global__ void conv_forward_kernel(const float* __restrict__ input,
-                                    const float* __restrict__ weights,
-                                    const float* __restrict__ bias,
-                                    float* __restrict__ output,
-                                    int C_in, int C_out,
-                                    int H, int W, int K) {
-    int out_y = blockIdx.y * blockDim.y + threadIdx.y;
-    int out_x = blockIdx.x * blockDim.x + threadIdx.x;
-    int out_c = blockIdx.z;
-
-    int out_h = H - K + 1;
-    int out_w = W - K + 1;
-    if (out_y >= out_h || out_x >= out_w) return;
-
-    float sum = 0.0f;
-    int kernel_size = K * K;
-    for (int c = 0; c < C_in; ++c) {
-        for (int ky = 0; ky < K; ++ky) {
-            for (int kx = 0; kx < K; ++kx) {
-                int in_idx = ((c * H) + (out_y + ky)) * W + (out_x + kx);
-                int w_idx = ((out_c * C_in + c) * K + ky) * K + kx;
-                sum += input[in_idx] * weights[w_idx];
-            }
-        }
+// Debug: Print first few values to verify correctness
+void debug_print(const std::string& name, const float* data, int count) {
+    std::cout << name << " first " << std::min(5, count) << " values: ";
+    for (int i = 0; i < std::min(5, count); ++i) {
+        std::cout << data[i] << " ";
     }
-    output[(out_c * out_h + out_y) * out_w + out_x] = sum + bias[out_c];
+    std::cout << std::endl;
 }
 
-// ======================================================================
-// FC Layer Kernel (Matrix Multiply style)
-// ======================================================================
-__global__ void fc_forward_kernel(const float* __restrict__ input,
-                                  const float* __restrict__ W,
-                                  const float* __restrict__ b,
-                                  float* __restrict__ output,
-                                  int in_size, int out_size) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= out_size) return;
-    float sum = b[idx];
-    for (int i = 0; i < in_size; ++i)
-        sum += input[i] * W[idx * in_size + i];
-    output[idx] = sum;
-}
-
-// ======================================================================
-// Helper: Normalization of MNIST bytes to float
-// ======================================================================
-void normalize_image(const unsigned char* src, float* dst, int size) {
-    for (int i = 0; i < size; ++i) dst[i] = src[i] / 255.0f;
-}
-
-// ======================================================================
-// MAIN GPU PIPELINE
-// ======================================================================
 int main() {
     try {
-        std::cout << "\n🚀 Optimized GPU Pipeline (Batched + Async)\n";
+        // --- Load MNIST test data ---
+        int n_images;
+        auto images_u8 = load_mnist_images("data/t10k-images-idx3-ubyte", n_images);
+        auto labels    = load_mnist_labels("data/t10k-labels-idx1-ubyte", n_images);
+        
+        std::cout << "Loaded " << n_images << " test images" << std::endl;
 
-        // Load MNIST test data
-        int img_count = 0, lbl_count = 0;
-        auto imgs_raw = load_mnist_images("../../data/t10k-images-idx3-ubyte", img_count);
-        auto labels = load_mnist_labels("../../data/t10k-labels-idx1-ubyte", lbl_count);
-        int H = 28, W = 28, C_in = 1;
-        img_count = std::min(img_count, lbl_count);
+        // --- Load exported pipeline weights ---
+        std::vector<int> conv_shape, conv_shape_b, fc_shape, fc_shape_b;
+        auto conv_w = load_csv_weights("exports/pipeline/conv_weight.csv", conv_shape);
+        auto conv_b = load_csv_weights("exports/pipeline/conv_bias.csv",  conv_shape_b);
+        auto fc_w   = load_csv_weights("exports/pipeline/fc_weight.csv",   fc_shape);
+        auto fc_b   = load_csv_weights("exports/pipeline/fc_bias.csv",    fc_shape_b);
 
-        // Load pretrained parameters
-        std::vector<int> s1, s2, s3, s4;
-        auto conv_w = load_csv_weights("../../exports/conv_weights.csv", s1);
-        auto conv_b = load_csv_weights("../../exports/conv_bias.csv", s2);
-        auto fc_w   = load_csv_weights("../../exports/fc_weights.csv", s3);
-        auto fc_b   = load_csv_weights("../../exports/fc_bias.csv", s4);
+        std::cout << "Conv weight shape: " << conv_shape[0] << "x" << conv_shape[1] << "x" << conv_shape[2] << std::endl;
+        std::cout << "FC weight shape: " << fc_shape[0] << "x" << fc_shape[1] << std::endl;
 
-        int C_out = s1[0]; // number of filters
-        int K = s1[2];
-        int out_h = H - K + 1, out_w = W - K + 1;
-        int fc_in = C_out * out_h * out_w;
-        int fc_out = s3[0];
+        // Debug: Print first few weights
+        debug_print("Conv_w", conv_w.data(), 5);
+        debug_print("Conv_b", conv_b.data(), 5);
+        debug_print("FC_w", fc_w.data(), 5);
+        debug_print("FC_b", fc_b.data(), 5);
 
-        // Device buffers
-        float *d_input, *d_conv_w, *d_conv_b, *d_conv_out;
-        float *d_fc_w, *d_fc_b, *d_fc_out;
-        CHECK(cudaMalloc(&d_conv_w, conv_w.size() * sizeof(float)));
-        CHECK(cudaMalloc(&d_conv_b, conv_b.size() * sizeof(float)));
-        CHECK(cudaMalloc(&d_fc_w, fc_w.size() * sizeof(float)));
-        CHECK(cudaMalloc(&d_fc_b, fc_b.size() * sizeof(float)));
+        // --- Model geometry ---
+        int C_out = conv_shape[0];
+        int C_in  = conv_shape[1];
+        int K_conv = conv_shape[2];
+        int H = 28, W = 28;
+        int out_h = H - K_conv + 1;
+        int out_w = W - K_conv + 1;
 
-        CHECK(cudaMemcpy(d_conv_w, conv_w.data(), conv_w.size() * sizeof(float), cudaMemcpyHostToDevice));
-        CHECK(cudaMemcpy(d_conv_b, conv_b.data(), conv_b.size() * sizeof(float), cudaMemcpyHostToDevice));
-        CHECK(cudaMemcpy(d_fc_w, fc_w.data(), fc_w.size() * sizeof(float), cudaMemcpyHostToDevice));
-        CHECK(cudaMemcpy(d_fc_b, fc_b.data(), fc_b.size() * sizeof(float), cudaMemcpyHostToDevice));
+        int pool_k = 2;
+        int pool_h = out_h / pool_k;
+        int pool_w = out_w / pool_k;
 
-        // Allocate device work buffers
-        CHECK(cudaMalloc(&d_input, BATCH_SIZE * C_in * H * W * sizeof(float)));
-        CHECK(cudaMalloc(&d_conv_out, BATCH_SIZE * C_out * out_h * out_w * sizeof(float)));
-        CHECK(cudaMalloc(&d_fc_out, BATCH_SIZE * fc_out * sizeof(float)));
+        int D = C_out * pool_h * pool_w; // FC input dim
+        int out_dim = fc_shape[0];
 
-        // Pinned host memory for DMA
-        float* h_input;
-        CHECK(cudaHostAlloc(&h_input, BATCH_SIZE * C_in * H * W * sizeof(float), cudaHostAllocDefault));
-        float* h_output = new float[BATCH_SIZE * fc_out];
+        std::cout << "Model geometry: C_in=" << C_in << ", C_out=" << C_out 
+                  << ", K_conv=" << K_conv << ", D=" << D << ", out_dim=" << out_dim << std::endl;
 
-        // Streams
-        const int NUM_STREAMS = 4;
-        cudaStream_t streams[NUM_STREAMS];
-        for (int i = 0; i < NUM_STREAMS; ++i) cudaStreamCreate(&streams[i]);
+        // Verify FC weight dimensions match expected
+        if (fc_shape[1] != D) {
+            std::cerr << "ERROR: FC weight dimension mismatch! Expected " << D << " got " << fc_shape[1] << std::endl;
+            return 1;
+        }
 
-        // Timer
-        auto start = std::chrono::high_resolution_clock::now();
-
-        // Process MNIST test set
-        int correct = 0;
-        for (int base = 0; base < img_count; base += BATCH_SIZE) {
-            int current_batch = std::min(BATCH_SIZE, img_count - base);
-            int sid = base / BATCH_SIZE % NUM_STREAMS;
-            cudaStream_t s = streams[sid];
-
-            // Prepare batch input (pinned memory)
-            for (int i = 0; i < current_batch; ++i)
-                normalize_image(&imgs_raw[(base + i) * H * W],
-                                &h_input[i * H * W], H * W);
-
-            // Async transfer to device
-            CHECK(cudaMemcpyAsync(d_input, h_input,
-                                  current_batch * H * W * sizeof(float),
-                                  cudaMemcpyHostToDevice, s));
-
-            // Launch convolution
-            dim3 threads(16, 16);
-            dim3 blocks((out_w + 15) / 16, (out_h + 15) / 16, C_out);
-            conv_forward_kernel<<<blocks, threads, 0, s>>>(d_input, d_conv_w, d_conv_b,
-                                                           d_conv_out, C_in, C_out, H, W, K);
-
-            // Flatten conv_out & FC
-            int grid_fc = (fc_out + THREADS - 1) / THREADS;
-            fc_forward_kernel<<<grid_fc, THREADS, 0, s>>>(d_conv_out, d_fc_w, d_fc_b, d_fc_out, fc_in, fc_out);
-
-            // Async copy result back
-            CHECK(cudaMemcpyAsync(h_output, d_fc_out,
-                                  current_batch * fc_out * sizeof(float),
-                                  cudaMemcpyDeviceToHost, s));
-
-            // Compute predictions (CPU side, after stream sync)
-            cudaStreamSynchronize(s);
-            for (int i = 0; i < current_batch; ++i) {
-                int best = 0; float maxv = h_output[i * fc_out];
-                for (int j = 1; j < fc_out; ++j) {
-                    float v = h_output[i * fc_out + j];
-                    if (v > maxv) { maxv = v; best = j; }
-                }
-                if (best == labels[base + i]) correct++;
+        // --- TRANSPOSE FC WEIGHTS  ---
+        std::vector<float> fc_w_transposed(D * out_dim);
+        for (int i = 0; i < out_dim; ++i) {
+            for (int j = 0; j < D; ++j) {
+                fc_w_transposed[j * out_dim + i] = fc_w[i * D + j];
             }
         }
 
-        auto end = std::chrono::high_resolution_clock::now();
-        double time_ms = std::chrono::duration<double, std::milli>(end - start).count();
+        size_t per_image_in = (size_t)C_in * H * W;
+        size_t per_image_conv_out = (size_t)C_out * out_h * out_w;
+        size_t per_image_pool_out = (size_t)C_out * pool_h * pool_w;
+        size_t per_image_fc_out = (size_t)out_dim;
 
-        std::cout << "\n✅ GPU Accuracy: " << (correct * 100.0 / img_count) << "%";
-        std::cout << "\n⏱️ Runtime: " << time_ms / 1000.0 << " seconds\n";
+        // --- Allocate device memory ---
+        float *d_input, *d_conv_out, *d_pool_out, *d_fc_out;
+        float *d_conv_w, *d_conv_b, *d_fc_w, *d_fc_b;
 
-        // Cleanup
-        for (int i = 0; i < NUM_STREAMS; ++i) cudaStreamDestroy(streams[i]);
-        cudaFreeHost(h_input);
-        delete[] h_output;
-        cudaFree(d_input);
-        cudaFree(d_conv_out);
+        cudaCheckError(cudaMalloc(&d_input,  BATCH_SIZE * per_image_in * sizeof(float)));
+        cudaCheckError(cudaMalloc(&d_conv_out, BATCH_SIZE * per_image_conv_out * sizeof(float)));
+        cudaCheckError(cudaMalloc(&d_pool_out, BATCH_SIZE * per_image_pool_out * sizeof(float)));
+        cudaCheckError(cudaMalloc(&d_fc_out, BATCH_SIZE * per_image_fc_out * sizeof(float)));
+
+        cudaCheckError(cudaMalloc(&d_conv_w, conv_w.size() * sizeof(float)));
+        cudaCheckError(cudaMalloc(&d_conv_b, conv_b.size() * sizeof(float)));
+        cudaCheckError(cudaMalloc(&d_fc_w,   fc_w_transposed.size() * sizeof(float)));
+        cudaCheckError(cudaMalloc(&d_fc_b,   fc_b.size() * sizeof(float)));
+
+        // Copy weights to device
+        cudaCheckError(cudaMemcpy(d_conv_w, conv_w.data(), conv_w.size() * sizeof(float), cudaMemcpyHostToDevice));
+        cudaCheckError(cudaMemcpy(d_conv_b, conv_b.data(), conv_b.size() * sizeof(float), cudaMemcpyHostToDevice));
+        cudaCheckError(cudaMemcpy(d_fc_w, fc_w_transposed.data(), fc_w_transposed.size() * sizeof(float), cudaMemcpyHostToDevice));
+        cudaCheckError(cudaMemcpy(d_fc_b, fc_b.data(), fc_b.size() * sizeof(float), cudaMemcpyHostToDevice));
+
+        // Pinned host buffers
+        float *h_input_pinned, *h_fc_out_pinned;
+        cudaCheckError(cudaHostAlloc(&h_input_pinned, BATCH_SIZE * per_image_in * sizeof(float), cudaHostAllocDefault));
+        cudaCheckError(cudaHostAlloc(&h_fc_out_pinned, BATCH_SIZE * per_image_fc_out * sizeof(float), cudaHostAllocDefault));
+
+        cudaStream_t stream = 0;
+
+        // --- Performance Measurement Events ---
+        cudaEvent_t ev_total_start, ev_total_end;
+        cudaEvent_t ev_h2d_start, ev_h2d_end;
+        cudaEvent_t ev_cnn_start, ev_cnn_end;
+        cudaEvent_t ev_pool_start, ev_pool_end;
+        cudaEvent_t ev_fc_start, ev_fc_end;
+        cudaEvent_t ev_d2h_start, ev_d2h_end;
+
+        cudaEventCreate(&ev_total_start);
+        cudaEventCreate(&ev_total_end);
+        cudaEventCreate(&ev_h2d_start);
+        cudaEventCreate(&ev_h2d_end);
+        cudaEventCreate(&ev_cnn_start);
+        cudaEventCreate(&ev_cnn_end);
+        cudaEventCreate(&ev_pool_start);
+        cudaEventCreate(&ev_pool_end);
+        cudaEventCreate(&ev_fc_start);
+        cudaEventCreate(&ev_fc_end);
+        cudaEventCreate(&ev_d2h_start);
+        cudaEventCreate(&ev_d2h_end);
+
+        // Output files
+        std::ofstream perf("finalresults/pipeline_perf_fixed.csv");
+        perf << "batch_idx,images_in_batch,h2d_ms,cnn_ms,pool_ms,fc_ms,d2h_ms,total_batch_ms\n";
+
+        std::ofstream cls("finalresults/pipeline_classification_fixed.csv");
+        cls << "image_id,true_label,pred_label\n";
+
+        // Start total timer
+        cudaEventRecord(ev_total_start, stream);
+
+        int correct = 0;
+        int batch_idx = 0;
+        
+        for (int base = 0; base < n_images; base += BATCH_SIZE) {
+            int curr = std::min(BATCH_SIZE, n_images - base);
+            
+            cudaEvent_t ev_batch_start, ev_batch_end;
+            cudaEventCreate(&ev_batch_start);
+            cudaEventCreate(&ev_batch_end);
+            cudaEventRecord(ev_batch_start, stream);
+
+            // --- Prepare batch ---
+            for (int b = 0; b < curr; ++b) {
+                const unsigned char* src = images_u8.data() + (base + b) * H * W;
+                float* dst = h_input_pinned + (size_t)b * per_image_in;
+                for (int i = 0; i < H * W; ++i) dst[i] = src[i] / 255.0f;
+            }
+
+            // --- H2D Transfer ---
+            cudaEventRecord(ev_h2d_start, stream);
+            cudaCheckError(cudaMemcpyAsync(d_input, h_input_pinned,
+                                           curr * per_image_in * sizeof(float),
+                                           cudaMemcpyHostToDevice, stream));
+            cudaEventRecord(ev_h2d_end, stream);
+
+            // --- CNN Layer ---
+            cudaEventRecord(ev_cnn_start, stream);
+            run_cnn_layer(d_input, d_conv_out, d_conv_w, d_conv_b,
+                         curr, C_in, C_out, H, W, K_conv, stream);
+            cudaEventRecord(ev_cnn_end, stream);
+            cudaCheckError(cudaStreamSynchronize(stream));
+
+            // --- Pooling Layer ---  
+            cudaEventRecord(ev_pool_start, stream);
+            run_pooling_layer(d_conv_out, d_pool_out, curr, C_out, out_h, out_w, pool_k, stream);
+            cudaEventRecord(ev_pool_end, stream);
+            cudaCheckError(cudaStreamSynchronize(stream));
+
+            // --- FC Layer ---
+            cudaEventRecord(ev_fc_start, stream);
+            run_fc_layer(d_pool_out, d_fc_w, d_fc_b, d_fc_out, curr, D, out_dim, stream);
+            cudaEventRecord(ev_fc_end, stream);
+            cudaCheckError(cudaStreamSynchronize(stream));
+
+            // --- D2H Transfer ---
+            cudaEventRecord(ev_d2h_start, stream);
+            cudaCheckError(cudaMemcpyAsync(h_fc_out_pinned, d_fc_out,
+                                           curr * per_image_fc_out * sizeof(float),
+                                           cudaMemcpyDeviceToHost, stream));
+            cudaEventRecord(ev_d2h_end, stream);
+            cudaCheckError(cudaStreamSynchronize(stream));
+
+            // Record batch end time
+            cudaEventRecord(ev_batch_end, stream);
+            cudaCheckError(cudaStreamSynchronize(stream));
+
+            // --- Measure Times ---
+            float h2d_ms = 0.0f, cnn_ms = 0.0f, pool_ms = 0.0f, fc_ms = 0.0f, d2h_ms = 0.0f, total_batch_ms = 0.0f;
+            
+            cudaEventElapsedTime(&h2d_ms, ev_h2d_start, ev_h2d_end);
+            cudaEventElapsedTime(&cnn_ms, ev_cnn_start, ev_cnn_end);
+            cudaEventElapsedTime(&pool_ms, ev_pool_start, ev_pool_end);
+            cudaEventElapsedTime(&fc_ms, ev_fc_start, ev_fc_end);
+            cudaEventElapsedTime(&d2h_ms, ev_d2h_start, ev_d2h_end);
+            cudaEventElapsedTime(&total_batch_ms, ev_batch_start, ev_batch_end);
+
+            // --- Classification ---
+            for (int b = 0; b < curr; ++b) {
+                int img_idx = base + b;
+                float* logits = h_fc_out_pinned + (size_t)b * per_image_fc_out;
+                
+                // Debug first image
+                if (img_idx == 0) {
+                    std::cout << "First image logits: ";
+                    for (int j = 0; j < out_dim; ++j) {
+                        std::cout << logits[j] << " ";
+                    }
+                    std::cout << std::endl;
+                }
+                
+                int best = 0;
+                float bestv = logits[0];
+                for (int j = 1; j < out_dim; ++j) {
+                    if (logits[j] > bestv) { 
+                        bestv = logits[j]; 
+                        best = j; 
+                    }
+                }
+                cls << img_idx << "," << (int)labels[img_idx] << "," << best << "\n";
+                if (best == labels[img_idx]) ++correct;
+            }
+
+            // --- Write per-batch performance ---
+            perf << batch_idx << "," << curr << "," << h2d_ms << "," << cnn_ms << "," 
+                 << pool_ms << "," << fc_ms << "," << d2h_ms << "," << total_batch_ms << "\n";
+            
+            std::cout << "Batch " << batch_idx << ": " << curr << " images, "
+                      << "H2D: " << h2d_ms << "ms, CNN: " << cnn_ms << "ms, "
+                      << "Pool: " << pool_ms << "ms, FC: " << fc_ms << "ms, "
+                      << "D2H: " << d2h_ms << "ms, Total: " << total_batch_ms << "ms" << std::endl;
+
+            batch_idx++;
+            cudaEventDestroy(ev_batch_start);
+            cudaEventDestroy(ev_batch_end);
+        }
+
+        // --- Total Time Measurement ---
+        cudaEventRecord(ev_total_end, stream);
+        cudaCheckError(cudaStreamSynchronize(stream));
+        
+        float total_ms = 0.0f;
+        cudaEventElapsedTime(&total_ms, ev_total_start, ev_total_end);
+
+        double accuracy = 100.0 * correct / n_images;
+
+        // --- Write Summary Files ---
+        std::ofstream perf_summary("finalresults/pipeline_perf_summary_fixed.csv");
+        perf_summary << "total_ms,accuracy_percent,n_images,batch_size\n";
+        perf_summary << total_ms << "," << accuracy << "," << n_images << "," << BATCH_SIZE << "\n";
+        perf_summary.close();
+
+        std::cout << "✅ Fixed Pipeline complete. Accuracy: " << accuracy << "%" << std::endl;
+        std::cout << "⏱️  Total elapsed time: " << total_ms << " ms" << std::endl;
+        std::cout << "📊 Performance data saved to finalresults/pipeline_perf_fixed.csv" << std::endl;
+        std::cout << "📈 Summary saved to finalresults/pipeline_perf_summary_fixed.csv" << std::endl;
+
+        // --- Cleanup ---
+        perf.close();
+        cls.close();
+        
+        cudaFree(d_input); 
+        cudaFree(d_conv_out); 
+        cudaFree(d_pool_out); 
         cudaFree(d_fc_out);
-        cudaFree(d_conv_w);
-        cudaFree(d_conv_b);
-        cudaFree(d_fc_w);
+        cudaFree(d_conv_w); 
+        cudaFree(d_conv_b); 
+        cudaFree(d_fc_w); 
         cudaFree(d_fc_b);
-    }
-    catch (std::exception &e) {
-        std::cerr << "❌ Error: " << e.what() << std::endl;
+        cudaFreeHost(h_input_pinned); 
+        cudaFreeHost(h_fc_out_pinned);
+
+        // Destroy events
+        cudaEventDestroy(ev_total_start);
+        cudaEventDestroy(ev_total_end);
+        cudaEventDestroy(ev_h2d_start);
+        cudaEventDestroy(ev_h2d_end);
+        cudaEventDestroy(ev_cnn_start);
+        cudaEventDestroy(ev_cnn_end);
+        cudaEventDestroy(ev_pool_start);
+        cudaEventDestroy(ev_pool_end);
+        cudaEventDestroy(ev_fc_start);
+        cudaEventDestroy(ev_fc_end);
+        cudaEventDestroy(ev_d2h_start);
+        cudaEventDestroy(ev_d2h_end);
+
+    } catch (const std::exception &e) {
+        std::cerr << "❌ Pipeline error: " << e.what() << std::endl;
         return 1;
     }
     return 0;

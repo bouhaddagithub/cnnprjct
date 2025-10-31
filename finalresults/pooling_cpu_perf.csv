@@ -1,0 +1,2 @@
+total_ms,pool_ms_sum,n_images,C,K,out_h,out_w,mem_current_bytes,mem_peak_bytes
+0.3471,0.0106,10,1,2,14,14,1.2714e+07,1.2714e+07

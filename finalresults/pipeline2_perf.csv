@@ -1,2 +1,0 @@
-total_ms,conv_ms,pool_ms,fc_ms,h2d_ms,d2h_ms,accuracy_percent,n_images,D,out_dim
-1394.93,0.0248703,0.0130884,0.0058121,0.0142963,0.0300953,89.73,10000,1152,10

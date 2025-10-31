@@ -1,80 +1,169 @@
-// fc_cpu.cpp
+// pooling_cpu.cpp
+#include "pooling_cpu.h"
+#include <fstream>
+#include <sstream>
 
-#include "utils_cpu.h"
-#include <iostream>
-#include <vector>
-#include <algorithm>
+// ============================================================
+// Load Pooling Metadata (kernel size from pooling.meta.json)
+// ============================================================
+PoolingLayerCPU load_pooling_meta_cpu(const std::string &meta_path,
+                                      int C, int H, int W)
+{
+    PoolingLayerCPU pool;
+    pool.C = C;
+    pool.H = H;
+    pool.W = W;
+    pool.K = 2; // default kernel size
 
-int main(){
+    // Simple JSON parser for {"kernel_size": N}
+    std::ifstream f(meta_path);
+    if (f.is_open()) {
+        std::string line;
+        while (std::getline(f, line)) {
+            size_t pos = line.find("\"kernel_size\"");
+            if (pos != std::string::npos) {
+                size_t colon_pos = line.find(":", pos);
+                if (colon_pos != std::string::npos) {
+                    std::string num_str;
+                    for (size_t i = colon_pos + 1; i < line.length(); ++i) {
+                        if (isdigit(line[i])) {
+                            num_str += line[i];
+                        } else if (!num_str.empty()) {
+                            break;
+                        }
+                    }
+                    if (!num_str.empty()) {
+                        pool.K = std::stoi(num_str);
+                        break;
+                    }
+                }
+            }
+        }
+        f.close();
+    } else {
+        std::cerr << "⚠️ Could not open " << meta_path << ", using default kernel_size=2\n";
+    }
+
+    pool.out_h = H / pool.K;
+    pool.out_w = W / pool.K;
+
+    return pool;
+}
+
+// ============================================================
+// Pooling Forward Pass (MaxPool only)
+// ============================================================
+std::vector<float> pooling_forward_cpu(const std::vector<float> &in,
+                                       const PoolingLayerCPU &pool,
+                                       float &t_pool_ms)
+{
+    TimerCPU timer;
+    timer.start();
+
+    std::vector<float> pool_out((size_t)pool.C * pool.out_h * pool.out_w, 0.0f);
+
+    for (int c = 0; c < pool.C; ++c) {
+        for (int oy = 0; oy < pool.out_h; ++oy) {
+            for (int ox = 0; ox < pool.out_w; ++ox) {
+                float max_val = -1e9f;
+                
+                for (int ky = 0; ky < pool.K; ++ky) {
+                    for (int kx = 0; kx < pool.K; ++kx) {
+                        int in_y = oy * pool.K + ky;
+                        int in_x = ox * pool.K + kx;
+                        int in_idx = (c * pool.H + in_y) * pool.W + in_x;
+                        
+                        if (in[in_idx] > max_val) {
+                            max_val = in[in_idx];
+                        }
+                    }
+                }
+                
+                pool_out[(c * pool.out_h + oy) * pool.out_w + ox] = max_val;
+            }
+        }
+    }
+
+    t_pool_ms = timer.stop_ms();
+    return pool_out;
+}
+
+// ============================================================
+// Standalone Pooling Test for timing and export
+// ============================================================
+int run_pooling_cpu_standalone()
+{
     try {
         int n_images, rows, cols;
         auto images = load_mnist_images("data/t10k-images-idx3-ubyte", n_images, rows, cols);
-        int n_labels; auto labels = load_mnist_labels("data/t10k-labels-idx1-ubyte", n_labels);
+        int n_labels;
+        auto labels = load_mnist_labels("data/t10k-labels-idx1-ubyte", n_labels);
+        
+        if (n_images != n_labels)
+            std::cerr << "Warning: image/label counts differ\n";
 
-        // load fc_only exports (fc1, fc2)
-        std::vector<int> s1, s2;
-        auto fc1_w = load_csv_weights("exports/fc_only/fc1_weight.csv", s1); // [hidden, 784]
-        auto fc1_b = load_csv_weights("exports/fc_only/fc1_bias.csv", s1);
-        auto fc2_w = load_csv_weights("exports/fc_only/fc2_weight.csv", s2); // [10, hidden]
-        auto fc2_b = load_csv_weights("exports/fc_only/fc2_bias.csv", s2);
+        // Load pooling metadata
+        auto pool = load_pooling_meta_cpu("exports/pooling_only/pooling.meta.json",
+                                          1, rows, cols);
 
-        int hidden = (s1.size()>=1 ? s1[0] : 128);
-        int K = (s1.size()>=2 ? s1[1] : 784);
-        int out_dim = (s2.size()>=1 ? s2[0] : 10);
+        std::cout << "ℹ️ Using pooling kernel size K = " << pool.K << "\n";
 
-        TimerCPU t_total; t_total.start();
-        float t_fc1_sum=0.0f, t_relu_sum=0.0f, t_fc2_sum=0.0f;
-        int correct=0;
-        std::vector<std::vector<float>> classifications;
+        TimerCPU timer_total;
+        timer_total.start();
+        float t_pool_sum = 0.0f;
 
-        for(int i=0;i<std::min(n_images,n_labels);++i){
-            
-            std::vector<float> X((size_t)K);
-            for(int p=0;p<K;++p) X[p] = images[(size_t)i*rows*cols + p] / 255.0f;
+        // Run pooling on subset of images
+        int test_count = std::min(n_images, 10); // limit for perf test
+        for (int i = 0; i < test_count; ++i) {
+            // Normalize input
+            std::vector<float> in((size_t)pool.H * pool.W);
+            for (int p = 0; p < pool.H * pool.W; ++p)
+                in[p] = images[(size_t)i * pool.H * pool.W + p] / 255.0f;
 
-            
-            TimerCPU t1; t1.start();
-            std::vector<float> hidden_v((size_t)hidden);
-            for(int h=0; h<hidden; ++h){
-                float s = fc1_b.size()>h ? fc1_b[h] : 0.0f;
-                for(int k=0;k<K;++k) s += fc1_w[h*K + k] * X[k];
-                hidden_v[h] = s;
+            // Run pooling
+            float t_pool_ms;
+            auto pooled = pooling_forward_cpu(in, pool, t_pool_ms);
+            t_pool_sum += t_pool_ms;
+
+            // Save first pooled output for debug
+            if (i == 0) {
+                std::vector<std::vector<float>> mat;
+                for (int c = 0; c < pool.C; ++c) {
+                    std::vector<float> one_map;
+                    for (int oy = 0; oy < pool.out_h; ++oy)
+                        for (int ox = 0; ox < pool.out_w; ++ox)
+                            one_map.push_back(pooled[(c * pool.out_h + oy) * pool.out_w + ox]);
+                    mat.push_back(one_map);
+                }
+                write_csv_matrix("finalresults/pooling_cpu_features_sample.csv", mat, {});
             }
-            t_fc1_sum += t1.stop_ms();
-
-            // relu
-            TimerCPU t2; t2.start();
-            for(auto &v: hidden_v) if(v<0) v=0;
-            t_relu_sum += t2.stop_ms();
-
-            
-            TimerCPU t3; t3.start();
-            std::vector<float> outv(out_dim,0.0f);
-            for(int o=0;o<out_dim;++o){
-                float s = fc2_b.size()>o ? fc2_b[o] : 0.0f;
-                for(int h=0;h<hidden;++h) s += fc2_w[o*hidden + h] * hidden_v[h];
-                outv[o] = s;
-            }
-            t_fc2_sum += t3.stop_ms();
-
-            int pred = argmax(outv);
-            classifications.push_back({(float)i, (float)labels[i], (float)pred});
-            if(pred == labels[i]) ++correct;
         }
 
-        float total_ms = t_total.stop_ms();
-        double acc = 100.0 * correct / std::min(n_images,n_labels);
+        float total_ms = timer_total.stop_ms();
         auto mem = get_memory_usage_bytes();
 
-        write_perf_csv("finalresults/fc_cpu_perf.csv",
-            {"total_ms","fc1_ms_sum","relu_ms_sum","fc2_ms_sum","accuracy_percent","n_images","K","hidden","out_dim","mem_current_bytes","mem_peak_bytes"},
-            { total_ms, t_fc1_sum, t_relu_sum, t_fc2_sum, (float)acc, (float)std::min(n_images,n_labels), (float)K, (float)hidden, (float)out_dim, (float)mem.first, (float)mem.second });
+        write_perf_csv("finalresults/pooling_cpu_perf.csv",
+            {"total_ms", "pool_ms_sum", "n_images", "C", "K", "out_h", "out_w", 
+             "mem_current_bytes", "mem_peak_bytes"},
+            {total_ms, t_pool_sum, (float)test_count, (float)pool.C, (float)pool.K,
+             (float)pool.out_h, (float)pool.out_w, (float)mem.first, (float)mem.second});
 
-        write_csv_matrix("finalresults/fc_cpu_classification.csv", classifications, {"index","label","prediction"});
-        std::cout<<"FC CPU: total_ms="<<total_ms<<" acc="<<acc<<"%\n";
+        std::cout << "✅ Pooling CPU completed.\n"
+                  << "   Total time: " << total_ms << " ms\n"
+                  << "   Avg per image: " << (t_pool_sum / test_count) << " ms\n"
+                  << "   Images processed: " << test_count << "\n"
+                  << "   Kernel size: " << pool.K << "\n"
+                  << "   Output dims: " << pool.out_h << "x" << pool.out_w << "\n";
+
         return 0;
-    } catch(std::exception &e){
-        std::cerr<<"Error: "<<e.what()<<"\n";
+    }
+    catch (std::exception &e) {
+        std::cerr << "❌ Error: " << e.what() << "\n";
         return 1;
     }
+}
+
+// Main entry for standalone testing
+int main() {
+    return run_pooling_cpu_standalone();
 }

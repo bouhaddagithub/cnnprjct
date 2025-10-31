@@ -1,2 +1,2 @@
 total_ms,conv_ms_sum,fc_ms_sum,accuracy_percent,n_images,D,out_dim,mem_current_bytes,mem_peak_bytes
-784.764,553.043,222.165,95.15,10000,4608,10,1.39018e+07,1.67322e+07
+778.824,546.645,222.503,97.4,10000,4608,10,1.39059e+07,1.67281e+07
