@@ -11,11 +11,16 @@ import matplotlib.pyplot as plt
 # ========================================
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 CUDA_DIR = os.path.join(BASE_DIR, "cuda")
 CUDA_BUILD = os.path.join(CUDA_DIR, "build")
+
 CPU_DIR = os.path.join(BASE_DIR, "cpuversions")
 CPU_BUILD = os.path.join(CPU_DIR, "build")
+
 PY_DIR = os.path.join(BASE_DIR, "python")
+DATA_DIR = os.path.join(BASE_DIR, "data")
+EXPORTS_DIR = os.path.join(BASE_DIR, "exports")
 RESULTS_DIR = os.path.join(BASE_DIR, "finalresults")
 
 os.makedirs(RESULTS_DIR, exist_ok=True)
@@ -66,19 +71,27 @@ def run_python_script(script):
     print(result.stdout)
     return runtime, accuracy
 
-def compile_file(source_path, output_path, compiler, flags):
+def compile_file(source_path, output_path, compiler, flags, extra_sources=None):
     try:
-        cmd = [compiler] + flags + ["-o", output_path, source_path]
+        cmd = [compiler] + flags
+        if extra_sources:
+            cmd += extra_sources
+        cmd += ["-o", output_path, source_path]
         print(f"\n🔧 Compiling: {source_path} → {output_path}")
         subprocess.run(cmd, check=True)
         print("✅ Build successful!")
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
         print(f"❌ Compilation failed for {source_path}")
+        print("Command:", " ".join(cmd))
+        print("Error:", e)
 
 def run_executable(exec_path):
     print(f"\n🚀 Running: {exec_path}")
+    
+    # Run from the PROJECT ROOT so all relative paths work correctly
+    # Executables will access data/, exports/, and finalresults/ from root
     start = time.time()
-    result = subprocess.run(exec_path, shell=True, capture_output=True, text=True)
+    result = subprocess.run([os.path.abspath(exec_path)], capture_output=True, text=True, cwd=BASE_DIR)
     end = time.time()
     runtime = end - start
     stdout = result.stdout
@@ -108,6 +121,7 @@ for script in PYTHON_SCRIPTS:
 
 print("\n🔨 COMPILING CUDA + CPU FILES")
 
+# ---- CUDA Builds ----
 for name, file in CUDA_FILES.items():
     compile_file(
         os.path.join(CUDA_DIR, file),
@@ -115,11 +129,23 @@ for name, file in CUDA_FILES.items():
         "nvcc", ["-O2", "-arch=sm_61"]
     )
 
+# ---- CPU Builds (fixed linking path) ----
+UTILS_PATH = os.path.join(CPU_DIR, "utils_cpu.cpp")
+
 for name, file in CPU_FILES.items():
+    src_path = os.path.join(CPU_DIR, file)
+    out_path = os.path.join(CPU_BUILD, name + ".exe")
+
+    if not os.path.exists(UTILS_PATH):
+        print(f"❌ Missing utils_cpu.cpp file at: {UTILS_PATH}")
+        continue
+
     compile_file(
-        os.path.join(CPU_DIR, file),
-        os.path.join(CPU_BUILD, name + ".exe"),
-        "g++", ["-O2"]
+        src_path,
+        out_path,
+        "g++",
+        ["-O2", "-std=c++17"],
+        extra_sources=[UTILS_PATH]
     )
 
 # ========================================
@@ -127,6 +153,10 @@ for name, file in CPU_FILES.items():
 # ========================================
 
 print("\n🚀 RUNNING GPU & CPU MODULES")
+print(f"   All executables will run from: {BASE_DIR}")
+print(f"   Data directory: {DATA_DIR}")
+print(f"   Exports directory: {EXPORTS_DIR}")
+print(f"   Results directory: {RESULTS_DIR}")
 
 for category, build_path in [("GPU", CUDA_BUILD), ("CPU", CPU_BUILD)]:
     for name in (CUDA_FILES if category == "GPU" else CPU_FILES):

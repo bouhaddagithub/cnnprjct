@@ -8,15 +8,15 @@
 int main(){
     try {
         int n_images, rows, cols;
-        auto images = load_mnist_images("../data/t10k-images-idx3-ubyte", n_images, rows, cols);
-        int n_labels; auto labels = load_mnist_labels("../data/t10k-labels-idx1-ubyte", n_labels);
+        auto images = load_mnist_images("data/t10k-images-idx3-ubyte", n_images, rows, cols);
+        int n_labels; auto labels = load_mnist_labels("data/t10k-labels-idx1-ubyte", n_labels);
 
         // load fc_only exports (fc1, fc2)
         std::vector<int> s1, s2;
-        auto fc1_w = load_csv_weights("../exports/fc_only/fc1_weight.csv", s1); // [hidden, 784]
-        auto fc1_b = load_csv_weights("../exports/fc_only/fc1_bias.csv", s1);
-        auto fc2_w = load_csv_weights("../exports/fc_only/fc2_weight.csv", s2); // [10, hidden]
-        auto fc2_b = load_csv_weights("../exports/fc_only/fc2_bias.csv", s2);
+        auto fc1_w = load_csv_weights("exports/fc_only/fc1_weight.csv", s1); // [hidden, 784]
+        auto fc1_b = load_csv_weights("exports/fc_only/fc1_bias.csv", s1);
+        auto fc2_w = load_csv_weights("exports/fc_only/fc2_weight.csv", s2); // [10, hidden]
+        auto fc2_b = load_csv_weights("exports/fc_only/fc2_bias.csv", s2);
 
         int hidden = (s1.size()>=1 ? s1[0] : 128);
         int K = (s1.size()>=2 ? s1[1] : 784);
@@ -66,11 +66,11 @@ int main(){
         double acc = 100.0 * correct / std::min(n_images,n_labels);
         auto mem = get_memory_usage_bytes();
 
-        write_perf_csv("../finalresults/fc_cpu_perf.csv",
+        write_perf_csv("finalresults/fc_cpu_perf.csv",
             {"total_ms","fc1_ms_sum","relu_ms_sum","fc2_ms_sum","accuracy_percent","n_images","K","hidden","out_dim","mem_current_bytes","mem_peak_bytes"},
             { total_ms, t_fc1_sum, t_relu_sum, t_fc2_sum, (float)acc, (float)std::min(n_images,n_labels), (float)K, (float)hidden, (float)out_dim, (float)mem.first, (float)mem.second });
 
-        write_csv_matrix("../finalresults/fc_cpu_classification.csv", classifications, {"index","label","prediction"});
+        write_csv_matrix("finalresults/fc_cpu_classification.csv", classifications, {"index","label","prediction"});
         std::cout<<"FC CPU: total_ms="<<total_ms<<" acc="<<acc<<"%\n";
         return 0;
     } catch(std::exception &e){

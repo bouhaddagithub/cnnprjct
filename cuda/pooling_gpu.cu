@@ -50,8 +50,8 @@ __global__ void fc_batch_kernel(const float* W, const float* b, const float* X, 
 int main() {
     try {
         int n_images;
-        auto images_u8 = load_mnist_images("../data/t10k-images-idx3-ubyte", n_images);
-        auto labels = load_mnist_labels("../data/t10k-labels-idx1-ubyte", n_images);
+        auto images_u8 = load_mnist_images("data/t10k-images-idx3-ubyte", n_images);
+        auto labels = load_mnist_labels("data/t10k-labels-idx1-ubyte", n_images);
         if (images_u8.empty() || labels.empty()) {
             std::cerr << "MNIST test files not found in ../data/. Place t10k-images-idx3-ubyte and t10k-labels-idx1-ubyte there.\n";
             return 1;
@@ -62,8 +62,8 @@ int main() {
 
         // Load FC parameters exported by pooling_only.py
         std::vector<int> fc_shape;
-        auto fc_w = load_csv_weights("../exports/pooling_only/fc_weight.csv", fc_shape);
-        auto fc_b = load_csv_weights("../exports/pooling_only/fc_bias.csv", fc_shape);
+        auto fc_w = load_csv_weights("exports/pooling_only/fc_weight.csv", fc_shape);
+        auto fc_b = load_csv_weights("exports/pooling_only/fc_bias.csv", fc_shape);
 
         int out_dim = (fc_shape.size() >= 1) ? fc_shape[0] : 10;
       

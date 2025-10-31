@@ -22,16 +22,16 @@ __global__ void matmul_batch(const float* X, const float* Wt, const float* b, fl
 int main() {
     try {
         int n_images;
-        auto images_u8 = load_mnist_images("../data/t10k-images-idx3-ubyte", n_images);
-        auto labels = load_mnist_labels("../data/t10k-labels-idx1-ubyte", n_images);
+        auto images_u8 = load_mnist_images("data/t10k-images-idx3-ubyte", n_images);
+        auto labels = load_mnist_labels("data/t10k-labels-idx1-ubyte", n_images);
 
         
         std::vector<int> s_fc1w, s_fc1b, s_fc2w, s_fc2b;
 
-        auto fc1_w = load_csv_weights("../exports/fc_only/fc1_weight.csv", s_fc1w);
-        auto fc1_b = load_csv_weights("../exports/fc_only/fc1_bias.csv", s_fc1b);
-        auto fc2_w = load_csv_weights("../exports/fc_only/fc2_weight.csv", s_fc2w);
-        auto fc2_b = load_csv_weights("../exports/fc_only/fc2_bias.csv", s_fc2b);
+        auto fc1_w = load_csv_weights("exports/fc_only/fc1_weight.csv", s_fc1w);
+        auto fc1_b = load_csv_weights("exports/fc_only/fc1_bias.csv", s_fc1b);
+        auto fc2_w = load_csv_weights("exports/fc_only/fc2_weight.csv", s_fc2w);
+        auto fc2_b = load_csv_weights("exports/fc_only/fc2_bias.csv", s_fc2b);
 
        
         if (s_fc1w.size() < 2 || s_fc2w.size() < 2)

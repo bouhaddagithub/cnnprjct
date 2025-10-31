@@ -10,17 +10,17 @@ int main(){
     try {
      
         int n_images, rows, cols;
-        auto images = load_mnist_images("../data/t10k-images-idx3-ubyte", n_images, rows, cols);
+        auto images = load_mnist_images("data/t10k-images-idx3-ubyte", n_images, rows, cols);
         int n_labels;
-        auto labels = load_mnist_labels("../data/t10k-labels-idx1-ubyte", n_labels);
+        auto labels = load_mnist_labels("data/t10k-labels-idx1-ubyte", n_labels);
         if(n_images != n_labels) std::cerr<<"Warning: image/label counts differ\n";
 
       
         std::vector<int> conv_shape, conv_bias_shape, fc_shape, fc_bias_shape;
-        auto conv_w = load_csv_weights("../exports/cnn_only/conv_weight.csv", conv_shape); 
-        auto conv_b = load_csv_weights("../exports/cnn_only/conv_bias.csv", conv_bias_shape); 
-        auto fc_w   = load_csv_weights("../exports/cnn_only/fc_weight.csv", fc_shape); 
-        auto fc_b   = load_csv_weights("../exports/cnn_only/fc_bias.csv", fc_bias_shape); 
+        auto conv_w = load_csv_weights("exports/cnn_only/conv_weight.csv", conv_shape); 
+        auto conv_b = load_csv_weights("exports/cnn_only/conv_bias.csv", conv_bias_shape); 
+        auto fc_w   = load_csv_weights("exports/cnn_only/fc_weight.csv", fc_shape); 
+        auto fc_b   = load_csv_weights("exports/cnn_only/fc_bias.csv", fc_bias_shape); 
 
         // infer shapes if meta missing
         int outC = (conv_shape.size()>=1 ? conv_shape[0] : 8);
@@ -88,12 +88,12 @@ int main(){
         auto mem = get_memory_usage_bytes();
 
         // write perf
-        write_perf_csv("../finalresults/cnn_cpu_perf.csv",
+        write_perf_csv("finalresults/cnn_cpu_perf.csv",
             {"total_ms","conv_ms_sum","fc_ms_sum","accuracy_percent","n_images","D","out_dim","mem_current_bytes","mem_peak_bytes"},
             { total_ms, t_conv_sum, t_fc_sum, (float)acc, (float)std::min(n_images,n_labels), (float)D, (float)out_dim, (float)mem.first, (float)mem.second });
 
         // write classification
-        write_csv_matrix("../finalresults/cnn_cpu_classification.csv", classifications, {"index","label","prediction"});
+        write_csv_matrix("finalresults/cnn_cpu_classification.csv", classifications, {"index","label","prediction"});
 
         std::cout<<"CNN CPU: total_ms="<<total_ms<<" acc="<<acc<<"%\n";
         return 0;

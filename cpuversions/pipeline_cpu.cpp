@@ -11,17 +11,17 @@ int main() {
     try {
         // --- load MNIST test set ---
         int n_images, rows, cols;
-        auto images = load_mnist_images("../data/t10k-images-idx3-ubyte", n_images, rows, cols);
+        auto images = load_mnist_images("data/t10k-images-idx3-ubyte", n_images, rows, cols);
         int n_labels;
-        auto labels = load_mnist_labels("../data/t10k-labels-idx1-ubyte", n_labels);
+        auto labels = load_mnist_labels("data/t10k-labels-idx1-ubyte", n_labels);
         int N = std::min(n_images, n_labels);
 
         // --- load weights from exports/pipeline ---
         std::vector<int> conv_meta, conv_meta_b, fc_meta;
-        auto conv_w = load_csv_weights("../exports/pipeline/conv_weight.csv", conv_meta);
-        auto conv_b = load_csv_weights("../exports/pipeline/conv_bias.csv", conv_meta_b);
-        auto fc_w   = load_csv_weights("../exports/pipeline/fc_weight.csv", fc_meta);
-        auto fc_b   = load_csv_weights("../exports/pipeline/fc_bias.csv", fc_meta);
+        auto conv_w = load_csv_weights("exports/pipeline/conv_weight.csv", conv_meta);
+        auto conv_b = load_csv_weights("exports/pipeline/conv_bias.csv", conv_meta_b);
+        auto fc_w   = load_csv_weights("exports/pipeline/fc_weight.csv", fc_meta);
+        auto fc_b   = load_csv_weights("exports/pipeline/fc_bias.csv", fc_meta);
 
         // infer conv meta if not provided
         int Kout = (conv_meta.size() >= 1 ? conv_meta[0] : 8);
@@ -139,18 +139,18 @@ int main() {
         auto mem = get_memory_usage_bytes();
 
         // --- write performance CSV to finalresults ---
-        write_perf_csv("../finalresults/pipeline_cpu_perf.csv",
+        write_perf_csv("finalresults/pipeline_cpu_perf.csv",
             {"total_ms","conv_ms_sum","pool_ms_sum","fc_ms_sum","accuracy_percent","n_images","D","out_dim","mem_current_bytes","mem_peak_bytes"},
             { total_ms, t_conv_sum, t_pool_sum, t_fc_sum, (float)accuracy, (float)N, (float)D, (float)out_dim, (float)mem.first, (float)mem.second });
 
         // --- write classification CSV to finalresults ---
-        write_csv_matrix("../finalresults/pipeline_cpu_classification.csv", classification_rows, {"index","label","prediction"});
+        write_csv_matrix("finalresults/pipeline_cpu_classification.csv", classification_rows, {"index","label","prediction"});
 
         // print summary
         std::cout << "Pipeline CPU:\n";
         std::cout << "Total: " << total_ms << " ms\n";
         std::cout << "Accuracy: " << accuracy << " %\n";
-        std::cout << "Written: ../finalresults/pipeline_cpu_perf.csv and ../finalresults/pipeline_cpu_classification.csv\n";
+        std::cout << "Written: finalresults/pipeline_cpu_perf.csv and ../finalresults/pipeline_cpu_classification.csv\n";
 
         return 0;
     } catch (const std::exception &e) {

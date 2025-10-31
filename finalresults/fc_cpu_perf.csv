@@ -1,0 +1,2 @@
+total_ms,fc1_ms_sum,relu_ms_sum,fc2_ms_sum,accuracy_percent,n_images,K,hidden,out_dim,mem_current_bytes,mem_peak_bytes
+440.041,422.593,4.45303,4.94898,95.45,10000,784,128,10,1.3951e+07,1.97714e+07
